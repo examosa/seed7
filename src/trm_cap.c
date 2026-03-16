@@ -105,7 +105,9 @@ int my_tgetent (char *capbuf, char *terminal_name)
 
   {
     char *home_dir_path;
-    memSizeType file_name_size;
+    memSizeType home_dir_len;
+    memSizeType terminal_name_len;
+    memSizeType file_name_len;
     char *file_name;
     memSizeType len;
     FILE *term_descr_file;
@@ -123,11 +125,20 @@ int my_tgetent (char *capbuf, char *terminal_name)
     if (terminal_name == NULL) {
       terminal_name = "";
     } /* if */
-    /* Reserve space for optional '/' + ".term" + terminal_name. */
-    file_name_size = strlen(home_dir_path) + 6 + strlen(terminal_name);
+    home_dir_len = strlen(home_dir_path);
+    terminal_name_len = strlen(terminal_name);
+    if (terminal_name_len > MAX_MEMSIZETYPE - 6 ||
+	home_dir_len > MAX_MEMSIZETYPE - 6 - terminal_name_len) {
+      /* The computation of file_name_len would overflow. */
+      file_name_len = 0;
+    } else {
+      /* Reserve space for optional '/' + ".term" + terminal_name. */
+      file_name_len = home_dir_len + 6 + terminal_name_len;
+    } /* if */
     /* The macro ALLOC_CSTRI() considers the '\0' termination. */
-    /* It allocates one byte more than file_name_size.         */
-    if (ALLOC_CSTRI(file_name, file_name_size)) {
+    /* It allocates one byte more than file_name_len.          */
+    if (file_name_len != 0 &&
+        ALLOC_CSTRI(file_name, file_name_len)) {
       strcpy(file_name, home_dir_path);
       len = strlen(file_name);
       if (len > 0 && file_name[len - 1] != '/') {
