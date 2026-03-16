@@ -1444,7 +1444,7 @@ objectType prc_repeat (listType arguments)
     objectType statement;
     objectType condition;
     objectType cond_value;
-    boolType cond;
+    boolType cond;  /* No initialization necessary - see above */
 
   /* prc_repeat */
     statement = arg_2(arguments);
@@ -1483,7 +1483,7 @@ objectType prc_repeat_noop (listType arguments)
   {
     objectType condition;
     objectType cond_value;
-    boolType cond;
+    boolType cond;  /* No initialization necessary - see above */
 
   /* prc_repeat_noop */
     condition = arg_3(arguments);
@@ -2100,7 +2100,7 @@ objectType prc_while_noop (listType arguments)
   {
     objectType condition;
     objectType cond_value;
-    boolType cond;
+    boolType cond;  /* No initialization necessary - see above */
 
   /* prc_while_noop */
     condition = arg_2(arguments);
