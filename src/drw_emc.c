@@ -1701,6 +1701,8 @@ static char *getNameFromTitle (const char *winTitle, memSizeType *winNameSize)
     } /* while */
     nameSize = (memSizeType) (winTitle - startPos) + 16;
     *winNameSize = nameSize;
+    /* The macro ALLOC_CSTRI() considers the '\0' termination. */
+    /* It allocates one byte more than nameSize.               */
     if (unlikely(!ALLOC_CSTRI(winName, nameSize))) {
       logError(printf("getNameFromTitle(\"%s\"): malloc(" FMT_U_MEM ") failed\n",
                       winTitle, nameSize););
