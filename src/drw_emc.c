@@ -1699,6 +1699,7 @@ static char *getNameFromTitle (const char *winTitle, memSizeType *winNameSize)
     while (*winTitle != ' ' && *winTitle != '\0') {
       winTitle++;
     } /* while */
+    /* Reserve additional 16 hex digits for the random suffix. */
     nameSize = (memSizeType) (winTitle - startPos) + 16;
     *winNameSize = nameSize;
     /* The macro ALLOC_CSTRI() considers the '\0' termination. */
