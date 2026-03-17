@@ -1709,7 +1709,7 @@ static char *getNameFromTitle (const char *winTitle, memSizeType *winNameSize)
                       winTitle, nameSize););
     } else {
       memcpy(winName, startPos, nameSize - 16);
-      sprintf(&winName[nameSize - 16], FMT_X64, uintRand());
+      sprintf(&winName[nameSize - 16], F_X64(016), uintRand());
     } /* if */
     logFunction(printf("getNameFromTitle(\"%s\", " FMT_U_MEM ") --> \"%s\"\n",
                         winTitle, *winNameSize,
