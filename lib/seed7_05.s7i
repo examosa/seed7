@@ -1006,6 +1006,9 @@ const func boolean: succeeds (ref proc: statement) is func
     end block;
   end func;
 
+const func boolean: (in EXCEPTION: exception1) = (in EXCEPTION: exception2)   is action "ENU_EQ";
+const func boolean: (in EXCEPTION: exception1) <> (in EXCEPTION: exception2)  is action "ENU_NE";
+
 (**
  *  Type to describe the run-time error which raised an exception.
  *  It contains information about the exception, file and line.

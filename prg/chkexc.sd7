@@ -65,6 +65,56 @@ const func integer: intExpr (in integer: number) is
   return number + length(str(rand(1, 9))[2 ..]);
 
 
+const proc: check_ord_and_conv is func
+  local
+    var boolean: okay is TRUE;
+  begin
+    if  ord(MEMORY_ERROR)    <>  1 or
+        ord(ASSERTION_ERROR) <>  2 or
+        ord(NUMERIC_ERROR)   <>  3 or
+        ord(OVERFLOW_ERROR)  <>  4 or
+        ord(RANGE_ERROR)     <>  5 or
+        ord(INDEX_ERROR)     <>  6 or
+        ord(FILE_ERROR)      <>  7 or
+        ord(DATABASE_ERROR)  <>  8 or
+        ord(GRAPHIC_ERROR)   <>  9 or
+        ord(ILLEGAL_ACTION)  <> 10 then
+      okay := FALSE;
+      writeln(" ***** ord for exceptions does not work correctly.");
+    end if;
+    if  EXCEPTION conv  1 <> MEMORY_ERROR    or
+        EXCEPTION conv  2 <> ASSERTION_ERROR or
+        EXCEPTION conv  3 <> NUMERIC_ERROR   or
+        EXCEPTION conv  4 <> OVERFLOW_ERROR  or
+        EXCEPTION conv  5 <> RANGE_ERROR     or
+        EXCEPTION conv  6 <> INDEX_ERROR     or
+        EXCEPTION conv  7 <> FILE_ERROR      or
+        EXCEPTION conv  8 <> DATABASE_ERROR  or
+        EXCEPTION conv  9 <> GRAPHIC_ERROR   or
+        EXCEPTION conv 10 <> ILLEGAL_ACTION  then
+      okay := FALSE;
+      writeln(" ***** Converting integers to exceptions does not work correctly. (1)");
+    end if;
+    if  EXCEPTION conv intExpr( 1) <> MEMORY_ERROR    or
+        EXCEPTION conv intExpr( 2) <> ASSERTION_ERROR or
+        EXCEPTION conv intExpr( 3) <> NUMERIC_ERROR   or
+        EXCEPTION conv intExpr( 4) <> OVERFLOW_ERROR  or
+        EXCEPTION conv intExpr( 5) <> RANGE_ERROR     or
+        EXCEPTION conv intExpr( 6) <> INDEX_ERROR     or
+        EXCEPTION conv intExpr( 7) <> FILE_ERROR      or
+        EXCEPTION conv intExpr( 8) <> DATABASE_ERROR  or
+        EXCEPTION conv intExpr( 9) <> GRAPHIC_ERROR   or
+        EXCEPTION conv intExpr(10) <> ILLEGAL_ACTION  then
+      okay := FALSE;
+      writeln(" ***** Converting integers to exceptions does not work correctly. (2)");
+    end if;
+
+    if okay then
+      writeln("Exception ord function and conv operator work correctly.");
+    end if;
+  end func;
+
+
 const proc: check_integer_exponentiation (inout boolean: okay) is func
   local
     var integer: number is 0;
@@ -2399,6 +2449,7 @@ const proc: main is func
   begin
     # f4(6);
     writeln;
+    check_ord_and_conv;
     check_integer;
     check_bigInteger;
     check_float;

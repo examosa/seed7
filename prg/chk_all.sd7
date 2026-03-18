@@ -499,6 +499,7 @@ const string: chkerr_output is "\n\
   \All errors are reported correctly.\n";
 
 const string: chkexc_output is "\n\
+  \Exception ord function and conv operator work correctly.\n\
   \Integer exceptions work correctly.\n\
   \BigInteger exceptions work correctly.\n\
   \Floating point exceptions work correctly.\n\
