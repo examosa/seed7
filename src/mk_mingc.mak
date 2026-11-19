@@ -38,58 +38,13 @@ ALL_S7_LIBS = ..\bin\$(COMPILER_LIB) ..\bin\$(COMP_DATA_LIB) ..\bin\$(DRAW_LIB) 
 CC = ..\bin\call_gcc
 AR = ..\bin\call_ar
 
-MOBJ = s7.o
-POBJ = runerr.o option.o primitiv.o
-LOBJ = actlib.o arrlib.o biglib.o binlib.o blnlib.o bstlib.o chrlib.o cmdlib.o conlib.o dcllib.o \
-       drwlib.o enulib.o fillib.o fltlib.o hshlib.o intlib.o itflib.o kbdlib.o pcslib.o pollib.o \
-       prclib.o prglib.o reflib.o rfllib.o sctlib.o sellib.o setlib.o soclib.o sqllib.o strlib.o \
-       timlib.o typlib.o ut8lib.o
-EOBJ = exec.o doany.o objutl.o
-AOBJ = act_comp.o prg_comp.o analyze.o syntax.o token.o parser.o name.o type.o \
-       expr.o atom.o object.o scanner.o literal.o numlit.o findid.o msg_stri.o \
-       error.o infile.o libpath.o symbol.o info.o stat.o fatal.o match.o
-GOBJ = syvarutl.o traceutl.o actutl.o executl.o blockutl.o \
-       entutl.o identutl.o chclsutl.o arrutl.o
-ROBJ = arr_rtl.o bln_rtl.o bst_rtl.o chr_rtl.o cmd_rtl.o con_rtl.o dir_rtl.o drw_rtl.o fil_rtl.o \
-       flt_rtl.o hsh_rtl.o int_rtl.o itf_rtl.o pcs_rtl.o set_rtl.o soc_rtl.o sql_rtl.o str_rtl.o \
-       tim_rtl.o ut8_rtl.o heaputl.o numutl.o sigutl.o stackutl.o striutl.o
-DOBJ = big_rtl.o big_gmp.o cmd_win.o dir_win.o dll_win.o fil_win.o pcs_win.o pol_sel.o segv_win.o \
-       soc_none.o stat_win.o tim_win.o
-OBJ = $(MOBJ)
-SEED7_LIB_OBJ = $(ROBJ) $(DOBJ)
-DRAW_LIB_OBJ = gkb_rtl.o drw_win.o gkb_win.o
-CONSOLE_LIB_OBJ = kbd_rtl.o con_win.o
-DATABASE_LIB_OBJ = sql_base.o sql_db2.o sql_fire.o sql_ifx.o sql_lite.o sql_my.o sql_oci.o \
-                   sql_odbc.o sql_post.o sql_srv.o sql_tds.o
-COMP_DATA_LIB_OBJ = typ_data.o rfl_data.o ref_data.o listutl.o flistutl.o typeutl.o datautl.o
-COMPILER_LIB_OBJ = $(POBJ) $(LOBJ) $(EOBJ) $(AOBJ) $(GOBJ)
-
-MSRC = s7.c
-PSRC = runerr.c option.c primitiv.c
-LSRC = actlib.c arrlib.c biglib.c binlib.c blnlib.c bstlib.c chrlib.c cmdlib.c conlib.c dcllib.c \
-       drwlib.c enulib.c fillib.c fltlib.c hshlib.c intlib.c itflib.c kbdlib.c pcslib.c pollib.c \
-       prclib.c prglib.c reflib.c rfllib.c sctlib.c sellib.c setlib.c soclib.c sqllib.c strlib.c \
-       timlib.c typlib.c ut8lib.c
-ESRC = exec.c doany.c objutl.c
-ASRC = act_comp.c prg_comp.c analyze.c syntax.c token.c parser.c name.c type.c \
-       expr.c atom.c object.c scanner.c literal.c numlit.c findid.c msg_stri.c \
-       error.c infile.c libpath.c symbol.c info.c stat.c fatal.c match.c
-GSRC = syvarutl.c traceutl.c actutl.c executl.c blockutl.c \
-       entutl.c identutl.c chclsutl.c arrutl.c
-RSRC = arr_rtl.c bln_rtl.c bst_rtl.c chr_rtl.c cmd_rtl.c con_rtl.c dir_rtl.c drw_rtl.c fil_rtl.c \
-       flt_rtl.c hsh_rtl.c int_rtl.c itf_rtl.c pcs_rtl.c set_rtl.c soc_rtl.c sql_rtl.c str_rtl.c \
-       tim_rtl.c ut8_rtl.c heaputl.c numutl.c sigutl.c stackutl.c striutl.c
 DSRC = big_rtl.c big_gmp.c cmd_win.c dir_win.c dll_win.c fil_win.c pcs_win.c pol_sel.c segv_win.c \
        soc_none.c stat_win.c tim_win.c
-SRC = $(MSRC)
-SEED7_LIB_SRC = $(RSRC) $(DSRC)
 DRAW_LIB_SRC = gkb_rtl.c drw_win.c gkb_win.c
 CONSOLE_LIB_SRC = kbd_rtl.c con_win.c
-DATABASE_LIB_SRC_STD_INCL = sql_base.c sql_fire.c sql_lite.c sql_my.c sql_oci.c sql_odbc.c \
-                            sql_post.c sql_tds.c
-DATABASE_LIB_SRC = $(DATABASE_LIB_SRC_STD_INCL) sql_db2.c sql_ifx.c sql_srv.c
-COMP_DATA_LIB_SRC = typ_data.c rfl_data.c ref_data.c listutl.c flistutl.c typeutl.c datautl.c
-COMPILER_LIB_SRC = $(PSRC) $(LSRC) $(ESRC) $(ASRC) $(GSRC)
+
+include mk_src.mak
+include mk_obj_o.mak
 
 s7: ..\bin\s7.exe ..\prg\s7.exe
 	..\bin\s7 -l ..\lib level
