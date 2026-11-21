@@ -46,7 +46,8 @@ CONSOLE_LIB_SRC = kbd_rtl.c con_win.c
 include mk_src.mak
 include mk_obj_o.mak
 
-s7: ../bin/s7.exe ../prg/s7.exe
+s7: next_lvl
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) ../bin/s7.exe ../prg/s7.exe
 	../bin/s7.exe -l ../lib level
 	@echo
 	@echo "  Use 'make s7c' (with your make command) to create the compiler."
@@ -57,9 +58,8 @@ s7c: ../bin/s7c.exe ../prg/s7c.exe
 	@echo "  Use 'make test' (with your make command) to check Seed7."
 	@echo
 
-../bin/s7.exe: levelup.exe next_lvl $(OBJ) $(ALL_S7_LIBS)
+../bin/s7.exe: $(OBJ) $(ALL_S7_LIBS)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ../bin/s7
-	rm next_lvl
 
 ../prg/s7.exe: ../bin/s7.exe
 	cp ../bin/s7.exe ../prg
@@ -75,7 +75,6 @@ levelup.exe: levelup.c
 
 next_lvl: levelup.exe
 	./levelup.exe
-	echo "X" > next_lvl
 
 OBJCOPY_PARAMS = \
        -L SQLAllocHandle -L SQLBindCol -L SQLBindParameter -L SQLBrowseConnectW -L SQLColAttributeW \

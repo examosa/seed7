@@ -45,7 +45,8 @@ CONSOLE_LIB_SRC = kbd_rtl.c con_emc.c
 include mk_src.mak
 include mk_obj_o.mak
 
-s7: ../bin/s7.js ../prg/s7.js
+s7: next_lvl
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) ../bin/s7.js ../prg/s7.js
 	$(NODE) ../bin/s7.js -l ../lib level
 	$(NODE) --stack-size=8192 ../bin/s7.js -l ../lib -q ../prg/confval > ../bin/cc_conf_emcc.prop
 	@echo
@@ -57,13 +58,12 @@ s7c: ../bin/s7c.js ../prg/s7c.js
 	@echo "  Use 'make test' (with your make command) to check Seed7."
 	@echo
 
-../bin/s7.js: levelup next_lvl $(OBJ) $(ALL_S7_LIBS) ../bin/$(SPECIAL_LIB)
+../bin/s7.js: $(OBJ) $(ALL_S7_LIBS) ../bin/$(SPECIAL_LIB)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) --pre-js ../bin/$(SPECIAL_LIB) -o ../bin/s7.js
-	rm next_lvl
 
 ../prg/s7.js: ../bin/s7.js
-	ln -s ../bin/s7.js ../prg
-	ln -s ../bin/s7.wasm ../prg
+	ln -sf ../bin/s7.js ../prg
+	ln -sf ../bin/s7.wasm ../prg
 
 ../bin/s7c.js: ../prg/s7c.js
 	cp -p ../prg/s7c.js ../bin
@@ -77,7 +77,6 @@ levelup: levelup.c
 
 next_lvl: levelup
 	./levelup
-	echo "X" > next_lvl
 
 sql_%.o: sql_%.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDE_OPTIONS) -c $< -o $@
@@ -142,7 +141,9 @@ uninstall:
 dep: depend
 
 strip:
-	strip ../bin/s7
+	@echo
+	@echo "  Cannot strip."
+	@echo
 
 chkccomp.h:
 	echo "#define LIST_DIRECTORY_CONTENTS \"ls\"" > chkccomp.h

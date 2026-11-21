@@ -40,13 +40,15 @@ include mk_src.mak
 include mk_obj_o.mak
 
 ifeq ($(VERBOSE_HINTS),yes)
-s7: ..\bin\s7.exe ..\prg\s7.exe
+s7: next_lvl
+	$(MAKE) -f $(MAKEFILE_NAME) ..\bin\s7.exe ..\prg\s7.exe
 	..\bin\s7 -l ..\lib level
 	@echo.
 	@echo Use 'make s7c' (with your make command) to create the compiler.
 	@echo.
 else
-s7: ..\bin\s7.exe ..\prg\s7.exe
+s7: next_lvl
+	$(MAKE) -f $(MAKEFILE_NAME) ..\bin\s7.exe ..\prg\s7.exe
 	..\bin\s7 -l ..\lib level
 endif
 
@@ -59,9 +61,8 @@ else
 s7c: ..\bin\s7c.exe ..\prg\s7c.exe
 endif
 
-..\bin\s7.exe: levelup.exe next_lvl $(OBJ) $(ALL_S7_LIBS)
+..\bin\s7.exe: $(OBJ) $(ALL_S7_LIBS)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o $(S7_OUT)
-	del next_lvl
 
 ..\prg\s7.exe: ..\bin\s7.exe
 	copy ..\bin\s7.exe ..\prg /Y
@@ -74,7 +75,6 @@ endif
 
 next_lvl: levelup.exe
 	.\levelup.exe
-	echo X > next_lvl
 
 all: depend
 	$(MAKE) -f $(MAKEFILE_NAME) s7

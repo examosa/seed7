@@ -51,12 +51,12 @@ s7: ../bin/s7 ../prg/s7
 
 s7c: ../bin/s7c ../prg/s7c
 
-../bin/s7: levelup next_lvl $(OBJ) $(ALL_S7_LIBS)
+../bin/s7: levelup next_lvl .WAIT $(OBJ) $(ALL_S7_LIBS)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ../bin/s7
 	rm next_lvl
 
 ../prg/s7:
-	ln -s ../bin/s7 ../prg
+	ln -sf ../bin/s7 ../prg
 
 ../bin/s7c: ../prg/s7c
 	cp -p ../prg/s7c ../bin
@@ -218,9 +218,11 @@ depend: version.h wrdepend
 ../bin/$(COMPILER_LIB): $(COMPILER_LIB_OBJ)
 	ar r ../bin/$(COMPILER_LIB) $(COMPILER_LIB_OBJ)
 
-../bin/%: ../prg/%.sd7 ../bin/s7c
-	../bin/s7c -l ../lib -b ../bin -O3 -oc3 $<
-	mv $(<:.sd7=) ../bin
+.for u in $(UTILS)
+../bin/$(u): ../prg/$(u).sd7 ../bin/s7c
+	../bin/s7c -l ../lib -b ../bin -O3 -oc3 ../prg/$(u).sd7
+	mv ../prg/$(u) ../bin
+.endfor
 
 bas7: ../bin/bas7
 bigfiles: ../bin/bigfiles

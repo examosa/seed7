@@ -73,13 +73,13 @@ next_lvl: levelup.exe
 	.\levelup.exe
 	echo X > next_lvl
 
-sql_db2.o: sql_db2.c
+sql_db2.obj: sql_db2.c
 	$(CC) -c $(CPPFLAGS) $(DB2_INCLUDE_OPTION) $(CFLAGS) $< -o $@
 
-sql_ifx.o: sql_ifx.c
+sql_ifx.obj: sql_ifx.c
 	$(CC) -c $(CPPFLAGS) $(INFORMIX_INCLUDE_OPTION) $(CFLAGS) $< -o $@
 
-sql_srv.o: sql_srv.c
+sql_srv.obj: sql_srv.c
 	$(CC) -c $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(CFLAGS) $< -o $@
 
 all: depend

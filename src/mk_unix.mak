@@ -27,7 +27,8 @@ CONSOLE_LIB_SRC = kbd_rtl.c con_inf.c kbd_inf.c kbd_poll.c trm_inf.c trm_cap.c f
 include mk_src.mak
 include mk_obj_o.mak
 
-s7: ../bin/s7 ../prg/s7
+s7: next_lvl
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) ../bin/s7 ../prg/s7
 	../bin/s7 -l ../lib level
 	@echo
 	@echo "  Use 'make s7c' (with your make command) to create the compiler."
@@ -38,12 +39,11 @@ s7c: ../bin/s7c ../prg/s7c
 	@echo "  Use 'make test' (with your make command) to check Seed7."
 	@echo
 
-../bin/s7: levelup next_lvl $(OBJ) $(ALL_S7_LIBS)
+../bin/s7: $(OBJ) $(ALL_S7_LIBS)
 	$(CC) $(S7_LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ../bin/s7
-	rm next_lvl
 
 ../prg/s7:
-	ln -s ../bin/s7 ../prg
+	ln -sf ../bin/s7 ../prg
 
 ../bin/s7c: ../prg/s7c
 	cp -p ../prg/s7c ../bin
@@ -56,7 +56,6 @@ levelup: levelup.c
 
 next_lvl: levelup
 	./levelup
-	echo "X" > next_lvl
 
 ifeq ($(SQL_PARTIAL_LINK),yes)
 OBJCOPY_PARAMS = \

@@ -72,13 +72,13 @@ next_lvl: levelup.exe
 	.\levelup.exe
 	echo X > next_lvl
 
-sql_db2.o: sql_db2.c
+sql_db2.obj: sql_db2.c
 	$(CC) -c $(CPPFLAGS) $(DB2_INCLUDE_OPTION) $(CFLAGS) $<
 
-sql_ifx.o: sql_ifx.c
+sql_ifx.obj: sql_ifx.c
 	$(CC) -c $(CPPFLAGS) $(INFORMIX_INCLUDE_OPTION) $(CFLAGS) $<
 
-sql_srv.o: sql_srv.c
+sql_srv.obj: sql_srv.c
 	$(CC) -c $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(CFLAGS) $<
 
 all: depend
@@ -300,7 +300,7 @@ depend: version.h calltlib.exe setwpath.exe wrdepend.exe sudo.exe
 	del $(COMP_DATA_LIB_OBJ)
 	type a_depend >> depend
 	wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -c -w- -m -md $(COMPILER_LIB_SRC)
-	copy *.d d_depend
+	copy *.d a_depend
 	del *.d
 	del $(COMPILER_LIB_OBJ)
 	type a_depend >> depend
