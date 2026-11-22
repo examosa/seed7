@@ -106,8 +106,9 @@ COMPILING UNDER LINUX
     - The header files for ncurses (e.g. ncurses-devel, libncurses-devel or libncurses5-dev)
     - The development package of X11 (e.g. libX11-devel or libx11-dev)
 
-  The file 'makefile' is (almost) identical to 'mk_linux.mak'
-  and that file is already prepared to compile under Linux.
+  The file 'makefile' includes 'mk_linux.mak' (as a regular file so
+  copying another 'mk_<platform>.mak' over it will not overwrite
+  'mk_linux.mak') and is already prepared to compile under Linux.
   Go to the 'seed7/src' directory and type:
 
     make depend
@@ -339,21 +340,21 @@ COMPILING UNDER WINDOWS WITH TCC
   Windows is experimental.
 
   You need to decide, which archiver utility should be used
-  to create libraries. In the makefile mk_tcc_w.mak the value
-  ARCHIVER defines the archiver utility to be used. For the ar
+  to create libraries. In the makefile mk_tcc_w.mak the variable
+  AR defines the archiver utility to be used. For the ar
   utility from MinGW (ar should be in the search path) use the
   following lines (this is the default):
 
-    ARCHIVER = ar -r
-    # ARCHIVER = tiny_libmaker
+    AR = ar -r
+    # AR = tiny_libmaker
 
   As an alternative the tiny_libmaker utility can be used.
   Note that tiny_libmaker supports only 32-bit executables.
   You might need to copy tiny_libmaker.exe to the directory
   tcc. You need to change mk_tcc_w.mak also. Use the lines:
 
-    # ARCHIVER = ar -r
-    ARCHIVER = tiny_libmaker
+    # AR = ar -r
+    AR = tiny_libmaker
 
   Additionally you need some things:
 
@@ -716,8 +717,8 @@ COMPILING UNDER MAC OS
 
     LDFLAGS = -L/usr/X11R6/lib
 
-  Besides this 'mk_osx.mak' is almost identical to
-  'mk_linux.mak' and 'makefile'. If the X11 library is in a
+  Besides this 'mk_osx.mak' shares the common rules with
+  'mk_linux.mak' (which 'makefile' includes). If the X11 library is in a
   different directory you need to change the LDFLAGS value to
   that directory.
 
@@ -1179,20 +1180,23 @@ HOW TO USE THE GMP LIBRARY?
   You need the GMP library (one of gmp.lib/gmp.dll/gmp.a/gmp.so)
   and the gmp.h include file.
 
-  The use of GMP must be enabled explicit in the makefile.
-  In the makefile (that you use) is an echo statement with:
+  The use of GMP must be enabled explicitly. With the GNU make,
+  make7 or bmake makefiles pass USE_GMP=1 (and optionally
+  BIGINT_LIBS=" option to link GMP ") when running depend.
+  On nmake and Borland makefiles change 0 to 1 in the echo
+  statement for
 
     #define USE_GMP 0
 
-  To enable GMP just change the 0 in this echo statement to 1.
-  Remember to do a
+  inside the chkccomp.h: target. Remember to do a
 
     make clean
 
-  after you changed the makefile. When Seed7 is compiled with
+  after changing the setting (or the makefile). When Seed7 is compiled with
 
-    make depend
+    make USE_GMP=1 depend
 
+  (or "make depend" after editing #define USE_GMP 1),
   the program chkccomp.c checks if it is possible to compile and
   link a small test program with the GMP library. If the small
   test program works correct the definitions to use 'big_gmp.c'
@@ -1225,9 +1229,14 @@ HOW TO USE THE GMP LIBRARY?
   In this case either the include file gmp.h is missing or
   the GMP library cannot be linked. By default chkccomp.c
   uses "-lgmp" as option to link the GMP library. If a
-  different option should be used it can be added to the
-  makefile used to compile Seed7. The section to create
-  chkccomp.h: can be extended with a line like
+  different option should be used it can be passed on GNU make
+  or make7 makefiles (mk_unix.mak, mk_wing.mak, mk_dos.mak, and
+  mk_emccl.mak) with
+
+    make USE_GMP=1 BIGINT_LIBS=" option to link GMP " depend
+
+  or added directly to chkccomp.h: in the other makefiles with
+  a line like
 
     echo "#define BIGINT_LIBS \" option to link GMP \"" >> chkccomp.h
 

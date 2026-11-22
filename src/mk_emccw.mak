@@ -22,29 +22,35 @@ SYSTEM_CONSOLE_LIBS =
 # SYSTEM_DATABASE_LIBS is defined in the file "macros". The program chkccomp.c writes it to "macros" when doing "make depend".
 SYSTEM_DRAW_LIBS =
 SYSTEM_MATH_LIBS =
-ALL_SYSTEM_LIBS = $(SYSTEM_LIBS) $(SYSTEM_BIGINT_LIBS) $(SYSTEM_CONSOLE_LIBS) $(SYSTEM_DATABASE_LIBS) $(SYSTEM_DRAW_LIBS) $(SYSTEM_MATH_LIBS)
-SEED7_LIB = seed7_05_emc.a
-DRAW_LIB = s7_draw_emc.a
-CONSOLE_LIB = s7_con_emc.a
-DATABASE_LIB = s7_db_emc.a
-COMP_DATA_LIB = s7_data_emc.a
-COMPILER_LIB = s7_comp_emc.a
+LIB_EXT = _emc.a
+USE_GMP ?= 0
+MAKEFILE_NAME = mk_emccw.mak
 SPECIAL_LIB = pre_js.js
-ALL_S7_LIBS = ..\bin\$(COMPILER_LIB) ..\bin\$(COMP_DATA_LIB) ..\bin\$(DRAW_LIB) ..\bin\$(CONSOLE_LIB) ..\bin\$(DATABASE_LIB) ..\bin\$(SEED7_LIB)
 # CC = em++
 CC = emcc
+CXX = em++
+HOST_CC ?= gcc
+AR = emar
+ARFLAGS = r
 CC_ENVIRONMENT_INI = emcc_env.ini
 
-DSRC = big_rtl.c big_gmp.c cmd_unx.c dir_win.c dll_unx.c emc_utl.c fil_emc.c pcs_unx.c pol_unx.c \
-       soc_none.c tim_emc.c
-DRAW_LIB_SRC = gkb_rtl.c drw_emc.c gkb_emc.c
-CONSOLE_LIB_SRC = kbd_rtl.c con_emc.c
-
+include mk_lib.mak
 include mk_src.mak
+
+ALL_S7_LIBS = $(addprefix ..\bin\,$(S7_LIBS))
+DSRC = $(EMC_DSRC)
+DRAW_LIB_SRC = $(EMC_DRAW_SRC)
+CONSOLE_LIB_SRC = $(EMC_CON_SRC)
+
 include mk_obj_o.mak
 
+EMCC_UTILS = $(filter-out db7 ide7,$(UTILS))
+UTILS_BIN = $(addprefix ../bin/,$(addsuffix .js,$(EMCC_UTILS)))
+UTILS_JS_WIN = $(addprefix ..\bin\,$(addsuffix .js,$(UTILS)))
+UTILS_WASM_WIN = $(addprefix ..\bin\,$(addsuffix .wasm,$(UTILS)))
+
 s7: next_lvl
-	$(MAKE) -f mk_emccw.mak ..\bin\s7.js ..\prg\s7.js
+	$(MAKE) -f $(MAKEFILE_NAME) ..\bin\s7.js ..\prg\s7.js
 	node ..\bin\s7.js -l ..\lib level
 	node --stack-size=8192 ..\bin\s7.js -l ..\lib -q ..\prg\confval > ..\bin\cc_conf_emcc.prop
 	@echo.
@@ -71,7 +77,7 @@ s7c: ..\bin\s7c.js ..\prg\s7c.js
 	node --stack-size=8192 ..\bin\s7.js -l ..\lib ..\prg\s7c -l ..\lib -b ..\bin -O2 ..\prg\s7c
 
 levelup.exe: levelup.c
-	gcc levelup.c -o levelup
+	$(HOST_CC) $< -o levelup
 
 next_lvl: levelup.exe
 	.\levelup.exe
@@ -91,7 +97,7 @@ sql_ifx.o: sql_ifx.c
 sql_srv.o: sql_srv.c
 	$(CC) -c $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(CFLAGS) $(INCLUDE_OPTIONS) $<
 
-.PHONY: clean s7 s7c test check install all next_lvl strip clean_utils distclean uninstall
+.PHONY: clean s7 s7c test minimal_test check install all next_lvl strip clean_utils distclean uninstall utils wc lint lint2
 
 clean:
 	del *.o
@@ -123,55 +129,11 @@ clean:
 	@echo.
 
 clean_utils:
-	del ..\bin\bas7.js
-	del ..\bin\bigfiles.js
-	del ..\bin\calc7.js
-	del ..\bin\cat.js
-	del ..\bin\comanche.js
-	del ..\bin\db7.js
-	del ..\bin\diff7.js
-	del ..\bin\find7.js
-	del ..\bin\findchar.js
-	del ..\bin\ftp7.js
-	del ..\bin\ftpserv.js
-	del ..\bin\hd.js
-	del ..\bin\ide7.js
-	del ..\bin\make7.js
-	del ..\bin\portfwd7.js
-	del ..\bin\pv7.js
-	del ..\bin\s7check.js
-	del ..\bin\sql7.js
-	del ..\bin\sydir7.js
-	del ..\bin\tar7.js
-	del ..\bin\toutf8.js
-	del ..\bin\which.js
-	del ..\bin\bas7.wasm
-	del ..\bin\bigfiles.wasm
-	del ..\bin\calc7.wasm
-	del ..\bin\cat.wasm
-	del ..\bin\comanche.wasm
-	del ..\bin\db7.wasm
-	del ..\bin\diff7.wasm
-	del ..\bin\find7.wasm
-	del ..\bin\findchar.wasm
-	del ..\bin\ftp7.wasm
-	del ..\bin\ftpserv.wasm
-	del ..\bin\hd.wasm
-	del ..\bin\ide7.wasm
-	del ..\bin\make7.wasm
-	del ..\bin\portfwd7.wasm
-	del ..\bin\pv7.wasm
-	del ..\bin\s7check.wasm
-	del ..\bin\sql7.wasm
-	del ..\bin\sydir7.wasm
-	del ..\bin\tar7.wasm
-	del ..\bin\toutf8.wasm
-	del ..\bin\which.wasm
+	del $(UTILS_JS_WIN)
+	del $(UTILS_WASM_WIN)
 
 distclean: clean clean_utils
-	del level_bk.h
-	del level.h
-	del vers_emccw.h
+	del level_bk.h level.h vers_emccw.h
 
 test:
 	node ..\bin\s7.js -l ..\lib ..\prg\chk_all build
@@ -201,7 +163,7 @@ chkccomp.h:
 	echo #define LIST_DIRECTORY_CONTENTS "dir" > chkccomp.h
 	echo #define UNIX_DO_SLEEP >> chkccomp.h
 	echo #define REMOVE_WASM >> chkccomp.h
-	echo #define USE_GMP 0 >> chkccomp.h
+	echo #define USE_GMP $(USE_GMP) >> chkccomp.h
 	echo #define SYSTEM_CONSOLE_LIBS "$(SYSTEM_CONSOLE_LIBS)" >> chkccomp.h
 	echo #define SYSTEM_DRAW_LIBS "$(SYSTEM_DRAW_LIBS)" >> chkccomp.h
 
@@ -226,7 +188,7 @@ base.h:
 
 settings.h:
 	echo #define MAKE_UTILITY_NAME "$(MAKE)" > settings.h
-	echo #define MAKEFILE_NAME "mk_emccw.mak" >> settings.h
+	echo #define MAKEFILE_NAME "$(MAKEFILE_NAME)" >> settings.h
 	echo #define SEARCH_PATH_DELIMITER 0 >> settings.h
 	echo #define AWAIT_WITH_NANOSLEEP >> settings.h
 	echo #define IMPLEMENT_PTY_WITH_PIPE2 >> settings.h
@@ -241,7 +203,7 @@ settings.h:
 	echo #define os_exit doExit >> settings.h
 	echo #define os_atexit registerExitFunction >> settings.h
 	echo #define CALL_C_COMPILER_FROM_SHELL 1 >> settings.h
-	echo #define CPLUSPLUS_COMPILER "em++" >> settings.h
+	echo #define CPLUSPLUS_COMPILER "$(CXX)" >> settings.h
 	echo #define CC_OPT_DEBUG_INFO "-g" >> settings.h
 	echo #define CC_OPT_NO_WARNINGS "-w" >> settings.h
 	echo #define LINKER_OPT_NO_DEBUG_INFO "-Wl,--strip-debug" >> settings.h
@@ -262,16 +224,16 @@ version.h: chkccomp.exe base.h settings.h
 	copy version.h vers_emccw.h /Y
 
 chkccomp.exe: chkccomp.c chkccomp.h base.h settings.h
-	gcc chkccomp.c -o chkccomp
+	$(HOST_CC) $< -o chkccomp
 
-setwpath.exe: version.h setwpath.c
-	gcc setwpath.c -o setwpath
+setwpath.exe: setwpath.c version.h
+	$(HOST_CC) $< -o setwpath
 
-wrdepend.exe: version.h wrdepend.c
-	gcc wrdepend.c -o wrdepend
+wrdepend.exe: wrdepend.c version.h
+	$(HOST_CC) $< -o wrdepend
 
 sudo.exe: sudo.c
-	gcc sudo.c -w -o sudo
+	$(HOST_CC) $< -w -o sudo
 
 depend: version.h setwpath.exe wrdepend.exe sudo.exe
 	.\wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M -c $(SRC) "> depend"
@@ -289,207 +251,57 @@ depend: version.h setwpath.exe wrdepend.exe sudo.exe
 	@echo.
 
 ..\bin\$(SEED7_LIB): $(SEED7_LIB_OBJ)
-	emar r ..\bin\$(SEED7_LIB) $(SEED7_LIB_OBJ)
+	$(AR) $(ARFLAGS) $@ $^
 
 ..\bin\$(DRAW_LIB): $(DRAW_LIB_OBJ)
-	emar r ..\bin\$(DRAW_LIB) $(DRAW_LIB_OBJ)
+	$(AR) $(ARFLAGS) $@ $^
 
 ..\bin\$(CONSOLE_LIB): $(CONSOLE_LIB_OBJ)
-	emar r ..\bin\$(CONSOLE_LIB) $(CONSOLE_LIB_OBJ)
+	$(AR) $(ARFLAGS) $@ $^
 
 ..\bin\$(DATABASE_LIB): $(DATABASE_LIB_OBJ)
-	emar r ..\bin\$(DATABASE_LIB) $(DATABASE_LIB_OBJ)
+	$(AR) $(ARFLAGS) $@ $^
 
 ..\bin\$(COMP_DATA_LIB): $(COMP_DATA_LIB_OBJ)
-	emar r ..\bin\$(COMP_DATA_LIB) $(COMP_DATA_LIB_OBJ)
+	$(AR) $(ARFLAGS) $@ $^
 
 ..\bin\$(COMPILER_LIB): $(COMPILER_LIB_OBJ)
-	emar r ..\bin\$(COMPILER_LIB) $(COMPILER_LIB_OBJ)
+	$(AR) $(ARFLAGS) $@ $^
 
 ..\bin\$(SPECIAL_LIB): pre_js.js
-	copy pre_js.js ..\bin\$(SPECIAL_LIB)
+	copy $< $@
 
-..\bin\bas7.js: ..\prg\bas7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\bas7
-	copy ..\prg\bas7.js ..\bin /Y
-	del ..\prg\bas7.js
-	copy ..\prg\bas7.wasm ..\bin /Y
-	del ..\prg\bas7.wasm
+../bin/%.js: ../prg/%.sd7 ..\bin\s7c.js
+	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 $(subst /,\,$(<:.sd7=))
+	copy $(subst /,\,$(<:.sd7=.js)) ..\bin /Y
+	del $(subst /,\,$(<:.sd7=.js))
+	copy $(subst /,\,$(<:.sd7=.wasm)) ..\bin /Y
+	del $(subst /,\,$(<:.sd7=.wasm))
 
-..\bin\bigfiles.js: ..\prg\bigfiles.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\bigfiles
-	copy ..\prg\bigfiles.js ..\bin /Y
-	del ..\prg\bigfiles.js
-	copy ..\prg\bigfiles.wasm ..\bin /Y
-	del ..\prg\bigfiles.wasm
+bas7: ../bin/bas7.js
+bigfiles: ../bin/bigfiles.js
+calc7: ../bin/calc7.js
+cat: ../bin/cat.js
+comanche: ../bin/comanche.js
+db7: ../bin/db7.js
+diff7: ../bin/diff7.js
+find7: ../bin/find7.js
+findchar: ../bin/findchar.js
+ftp7: ../bin/ftp7.js
+ftpserv: ../bin/ftpserv.js
+hd: ../bin/hd.js
+ide7: ../bin/ide7.js
+make7: ../bin/make7.js
+portfwd7: ../bin/portfwd7.js
+pv7: ../bin/pv7.js
+s7check: ../bin/s7check.js
+sql7: ../bin/sql7.js
+sydir7: ../bin/sydir7.js
+tar7: ../bin/tar7.js
+toutf8: ../bin/toutf8.js
+which: ../bin/which.js
 
-..\bin\calc7.js: ..\prg\calc7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\calc7
-	copy ..\prg\calc7.js ..\bin /Y
-	del ..\prg\calc7.js
-	copy ..\prg\calc7.wasm ..\bin /Y
-	del ..\prg\calc7.wasm
-
-..\bin\cat.js: ..\prg\cat.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\cat
-	copy ..\prg\cat.js ..\bin /Y
-	del ..\prg\cat.js
-	copy ..\prg\cat.wasm ..\bin /Y
-	del ..\prg\cat.wasm
-
-..\bin\comanche.js: ..\prg\comanche.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\comanche
-	copy ..\prg\comanche.js ..\bin /Y
-	del ..\prg\comanche.js
-	copy ..\prg\comanche.wasm ..\bin /Y
-	del ..\prg\comanche.wasm
-
-..\bin\db7.js: ..\prg\db7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\db7
-	copy ..\prg\db7.js ..\bin /Y
-	del ..\prg\db7.js
-	copy ..\prg\db7.wasm ..\bin /Y
-	del ..\prg\db7.wasm
-
-..\bin\diff7.js: ..\prg\diff7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\diff7
-	copy ..\prg\diff7.js ..\bin /Y
-	del ..\prg\diff7.js
-	copy ..\prg\diff7.wasm ..\bin /Y
-	del ..\prg\diff7.wasm
-
-..\bin\find7.js: ..\prg\find7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\find7
-	copy ..\prg\find7.js ..\bin /Y
-	del ..\prg\find7.js
-	copy ..\prg\find7.wasm ..\bin /Y
-	del ..\prg\find7.wasm
-
-..\bin\findchar.js: ..\prg\findchar.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\findchar
-	copy ..\prg\findchar.js ..\bin /Y
-	del ..\prg\findchar.js
-	copy ..\prg\findchar.wasm ..\bin /Y
-	del ..\prg\findchar.wasm
-
-..\bin\ftp7.js: ..\prg\ftp7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\ftp7
-	copy ..\prg\ftp7.js ..\bin /Y
-	del ..\prg\ftp7.js
-	copy ..\prg\ftp7.wasm ..\bin /Y
-	del ..\prg\ftp7.wasm
-
-..\bin\ftpserv.js: ..\prg\ftpserv.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\ftpserv
-	copy ..\prg\ftpserv.js ..\bin /Y
-	del ..\prg\ftpserv.js
-	copy ..\prg\ftpserv.wasm ..\bin /Y
-	del ..\prg\ftpserv.wasm
-
-..\bin\hd.js: ..\prg\hd.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\hd
-	copy ..\prg\hd.js ..\bin /Y
-	del ..\prg\hd.js
-	copy ..\prg\hd.wasm ..\bin /Y
-	del ..\prg\hd.wasm
-
-..\bin\ide7.js: ..\prg\ide7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\ide7
-	copy ..\prg\ide7.js ..\bin /Y
-	del ..\prg\ide7.js
-	copy ..\prg\ide7.wasm ..\bin /Y
-	del ..\prg\ide7.wasm
-
-..\bin\make7.js: ..\prg\make7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\make7
-	copy ..\prg\make7.js ..\bin /Y
-	del ..\prg\make7.js
-	copy ..\prg\make7.wasm ..\bin /Y
-	del ..\prg\make7.wasm
-
-..\bin\portfwd7.js: ..\prg\portfwd7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\portfwd7
-	copy ..\prg\portfwd7.js ..\bin /Y
-	del ..\prg\portfwd7.js
-	copy ..\prg\portfwd7.wasm ..\bin /Y
-	del ..\prg\portfwd7.wasm
-
-..\bin\pv7.js: ..\prg\pv7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\pv7
-	copy ..\prg\pv7.js ..\bin /Y
-	del ..\prg\pv7.js
-	copy ..\prg\pv7.wasm ..\bin /Y
-	del ..\prg\pv7.wasm
-
-..\bin\s7check.js: ..\prg\s7check.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\s7check
-	copy ..\prg\s7check.js ..\bin /Y
-	del ..\prg\s7check.js
-	copy ..\prg\s7check.wasm ..\bin /Y
-	del ..\prg\s7check.wasm
-
-..\bin\sql7.js: ..\prg\sql7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\sql7
-	copy ..\prg\sql7.js ..\bin /Y
-	del ..\prg\sql7.js
-	copy ..\prg\sql7.wasm ..\bin /Y
-	del ..\prg\sql7.wasm
-
-..\bin\sydir7.js: ..\prg\sydir7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\sydir7
-	copy ..\prg\sydir7.js ..\bin /Y
-	del ..\prg\sydir7.js
-	copy ..\prg\sydir7.wasm ..\bin /Y
-	del ..\prg\sydir7.wasm
-
-..\bin\tar7.js: ..\prg\tar7.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\tar7
-	copy ..\prg\tar7.js ..\bin /Y
-	del ..\prg\tar7.js
-	copy ..\prg\tar7.wasm ..\bin /Y
-	del ..\prg\tar7.wasm
-
-..\bin\toutf8.js: ..\prg\toutf8.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\toutf8
-	copy ..\prg\toutf8.js ..\bin /Y
-	del ..\prg\toutf8.js
-	copy ..\prg\toutf8.wasm ..\bin /Y
-	del ..\prg\toutf8.wasm
-
-..\bin\which.js: ..\prg\which.sd7 ..\bin\s7c.js
-	node --stack-size=8192 ..\bin\s7c.js -l ..\lib -b ..\bin -O2 ..\prg\which
-	copy ..\prg\which.js ..\bin /Y
-	del ..\prg\which.js
-	copy ..\prg\which.wasm ..\bin /Y
-	del ..\prg\which.wasm
-
-bas7: ..\bin\bas7.js
-bigfiles: ..\bin\bigfiles.js
-calc7: ..\bin\calc7.js
-cat: ..\bin\cat.js
-comanche: ..\bin\comanche.js
-db7: ..\bin\db7.js
-diff7: ..\bin\diff7.js
-find7: ..\bin\find7.js
-findchar: ..\bin\findchar.js
-ftp7: ..\bin\ftp7.js
-ftpserv: ..\bin\ftpserv.js
-hd: ..\bin\hd.js
-ide7: ..\bin\ide7.js
-make7: ..\bin\make7.js
-portfwd7: ..\bin\portfwd7.js
-pv7: ..\bin\pv7.js
-s7check: ..\bin\s7check.js
-sql7: ..\bin\sql7.js
-sydir7: ..\bin\sydir7.js
-tar7: ..\bin\tar7.js
-toutf8: ..\bin\toutf8.js
-which: ..\bin\which.js
-
-utils: ..\bin\bas7.js ..\bin\bigfiles.js ..\bin\calc7.js ..\bin\cat.js ..\bin\comanche.js \
-       ..\bin\diff7.js ..\bin\find7.js ..\bin\findchar.js ..\bin\ftp7.js ..\bin\ftpserv.js ..\bin\hd.js \
-       ..\bin\make7.js ..\bin\portfwd7.js ..\bin\pv7.js ..\bin\s7check.js ..\bin\sql7.js \
-       ..\bin\sydir7.js ..\bin\tar7.js ..\bin\toutf8.js ..\bin\which.js
+utils: $(UTILS_BIN)
 
 wc: $(SRC)
 	@echo SRC:

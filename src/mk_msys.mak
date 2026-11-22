@@ -25,364 +25,83 @@ SYSTEM_LIBS = -lws2_32
 SYSTEM_CONSOLE_LIBS =
 # SYSTEM_DATABASE_LIBS is defined in the file "macros". The program chkccomp.c writes it to "macros" when doing "make depend".
 SYSTEM_DRAW_LIBS = -lgdi32
-SYSTEM_MATH_LIBS = -lm
-ALL_SYSTEM_LIBS = $(SYSTEM_LIBS) $(SYSTEM_BIGINT_LIBS) $(SYSTEM_CONSOLE_LIBS) $(SYSTEM_DATABASE_LIBS) $(SYSTEM_DRAW_LIBS) $(SYSTEM_MATH_LIBS)
-SEED7_LIB = seed7_05.a
-DRAW_LIB = s7_draw.a
-CONSOLE_LIB = s7_con.a
-DATABASE_LIB = s7_db.a
-COMP_DATA_LIB = s7_data.a
-COMPILER_LIB = s7_comp.a
-ALL_S7_LIBS = ../bin/$(COMPILER_LIB) ../bin/$(COMP_DATA_LIB) ../bin/$(DRAW_LIB) ../bin/$(CONSOLE_LIB) ../bin/$(DATABASE_LIB) ../bin/$(SEED7_LIB)
 # CC = g++
 CC = gcc
-AR = ar
+VERS_FILE = vers_msys.h
 
-DSRC = big_rtl.c big_gmp.c cmd_win.c dir_win.c dll_win.c fil_win.c pcs_win.c pol_sel.c segv_win.c \
-       soc_none.c stat_win.c tim_win.c
-DRAW_LIB_SRC = gkb_rtl.c drw_win.c gkb_win.c
-CONSOLE_LIB_SRC = kbd_rtl.c con_win.c
+EXE_EXT = .exe
+S7_OUT = ../bin/s7
+PRG_S7_STYLE = copy
+CP_S7C = cp
+VERSION_EXTRA_ARGS =
+RUN_WARN = no
+DEPEND_EXTRA_TOOLS = setwpath.exe sudo.exe
+INSTALL_STYLE = setwpath
+TEST_INSTALL_HINT = msys
+STRIP_TARGETS = ../bin/s7.exe
+DSRC = $(WIN_DSRC)
+DRAW_LIB_SRC = $(WIN_DRAW_SRC)
+CONSOLE_LIB_SRC = $(WIN_CON_SRC)
 
-include mk_src.mak
-include mk_obj_o.mak
+include mk_unix.mak
 
-s7: next_lvl
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) ../bin/s7.exe ../prg/s7.exe
-	../bin/s7.exe -l ../lib level
-	@echo
-	@echo "  Use 'make s7c' (with your make command) to create the compiler."
-	@echo
-
-s7c: ../bin/s7c.exe ../prg/s7c.exe
-	@echo
-	@echo "  Use 'make test' (with your make command) to check Seed7."
-	@echo
-
-../bin/s7.exe: $(OBJ) $(ALL_S7_LIBS)
-	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ../bin/s7
-
-../prg/s7.exe: ../bin/s7.exe
-	cp ../bin/s7.exe ../prg
-
-../bin/s7c.exe: ../prg/s7c.exe
-	cp ../prg/s7c.exe ../bin
-
-../prg/s7c.exe: ../prg/s7c.sd7 $(ALL_S7_LIBS)
-	../bin/s7.exe -l ../lib ../prg/s7c -l ../lib -b ../bin -O2 ../prg/s7c
-
-levelup.exe: levelup.c
-	$(CC) levelup.c -o levelup
-
-next_lvl: levelup.exe
-	./levelup.exe
-
-OBJCOPY_PARAMS = \
-       -L SQLAllocHandle -L SQLBindCol -L SQLBindParameter -L SQLBrowseConnectW -L SQLColAttributeW \
-       -L SQLConnectW -L SQLDataSources -L SQLDescribeColW -L SQLDescribeParam -L SQLDisconnect \
-       -L SQLDriverConnectW -L SQLDriversW -L SQLEndTran -L SQLExecute -L SQLFetch -L SQLFreeHandle \
-       -L SQLFreeStmt -L SQLGetConnectAttrW -L SQLGetData -L SQLGetDiagRecW -L SQLGetInfoW \
-       -L SQLGetStmtAttrW -L SQLGetTypeInfoW -L SQLNumParams -L SQLNumResultCols -L SQLPrepareW \
-       -L SQLSetConnectAttrW -L SQLSetDescFieldW -L SQLSetEnvAttr
-
-sql_db2.o: sql_db2.c sql_cli.c sql_log.c
-	$(CC) $(CPPFLAGS) $(DB2_INCLUDE_OPTION) $(CFLAGS_NO_FLTO) $< $(DB2_LIBS) $(DB2_CC_OPTION) -o $@
-	$(OBJCOPY) $(OBJCOPY_PARAMS) $@
-
-sql_ifx.o: sql_ifx.c sql_cli.c sql_log.c
-	$(CC) $(CPPFLAGS) $(INFORMIX_INCLUDE_OPTION) $(CFLAGS_NO_FLTO) $< $(INFORMIX_LIBS) $(INFORMIX_CC_OPTION) -o $@
-	$(OBJCOPY) $(OBJCOPY_PARAMS) $@
-
-sql_srv.o: sql_srv.c sql_cli.c sql_log.c
-	$(CC) $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(CFLAGS_NO_FLTO) $< $(SQL_SERVER_LIBS) $(SQL_SERVER_CC_OPTION) -o $@
-	$(OBJCOPY) $(OBJCOPY_PARAMS) $@
-
-all: depend
-	$(MAKE) -f mk_msys.mak s7
-	$(MAKE) -f mk_msys.mak s7c
-
-.PHONY: clean s7 s7c test check install all next_lvl strip clean_utils distclean uninstall
-
-clean:
-	rm -f *.o $(ALL_S7_LIBS) ../bin/s7.exe ../bin/s7c.exe ../prg/s7.exe ../prg/s7c.exe depend macros chkccomp.h base.h settings.h version.h chkccomp.exe setwpath.exe wrdepend.exe sudo.exe levelup.exe next_lvl
-	@echo
-	@echo "  Use 'make depend' (with your make command) to create the dependencies."
-	@echo
-
-clean_utils:
-	rm -f ../bin/bas7.exe ../bin/bigfiles.exe ../bin/calc7.exe ../bin/cat.exe ../bin/comanche.exe ../bin/db7.exe
-	rm -f ../bin/diff7.exe ../bin/find7.exe ../bin/findchar.exe ../bin/ftp7.exe ../bin/ftpserv.exe ../bin/hd.exe
-	rm -f ../bin/ide7.exe ../bin/make7.exe ../bin/portfwd7.exe ../bin/pv7.exe ../bin/s7check.exe ../bin/sql7.exe
-	rm -f ../bin/sydir7.exe ../bin/tar7.exe ../bin/toutf8.exe ../bin/which.exe
-
-distclean: clean clean_utils
-	rm -f level_bk.h level.h
-	rm -f vers_msys.h
-
-test:
-	../bin/s7.exe -l ../lib ../prg/chk_all build
-	@echo
-	@echo "  Use './sudo make install' (with your make command) to install Seed7."
-	@echo "  Or open a console as administrator, go to the directory seed7/src"
-	@echo "  and use 'make install' (with your make command) to install Seed7."
-	@echo
-
-minimal_test:
-	../bin/s7.exe -l ../lib ../prg/chk_all build minimal_test
-
-check: test
-
-install: setwpath.exe
-	./setwpath.exe add ../bin
-
-uninstall: setwpath.exe
-	./setwpath.exe remove ../bin
-
-strip:
-	strip ../bin/s7.exe
-
-chkccomp.h:
-	echo "#define LIST_DIRECTORY_CONTENTS \"dir\"" > chkccomp.h
-	echo "#define LINKER_OPT_STATIC_LINKING \"-static\"" >> chkccomp.h
-	echo "#define CC_FLAGS \"-ffunction-sections -fdata-sections\"" >> chkccomp.h
-	echo "#define CC_FLAGS64 \"-Wa,-mbig-obj\"" >> chkccomp.h
-	echo "#define CC_OPT_LINK_TIME_OPTIMIZATION \"-flto=auto\"" >> chkccomp.h
-	echo "#define CC_OPT_POSITION_INDEPENDENT_CODE \"-fPIC\"" >> chkccomp.h
-	echo "#define LINKER_OPT_NO_LTO \"-fno-lto\"" >> chkccomp.h
-	echo "#define POTENTIAL_PARTIAL_LINKING_OPTIONS \"-r\"" >> chkccomp.h
-	echo "#define USE_GMP 0" >> chkccomp.h
-	echo "#define SYSTEM_CONSOLE_LIBS \"$(SYSTEM_CONSOLE_LIBS)\"" >> chkccomp.h
-	echo "#define SYSTEM_DRAW_LIBS \"$(SYSTEM_DRAW_LIBS)\"" >> chkccomp.h
-	echo "#define INT_DIV_OVERFLOW_INFINITE_LOOP 1" >> chkccomp.h
-	echo "#define POSTGRESQL_USE_DLL" >> chkccomp.h
-
-base.h:
-	echo "#define PATH_DELIMITER 92 /* backslash (ASCII) */" > base.h
-	echo "#define OS_STRI_WCHAR" >> base.h
-	echo "#define QUOTE_WHOLE_SHELL_COMMAND" >> base.h
-	echo "#define OBJECT_FILE_EXTENSION \".o\"" >> base.h
-	echo "#define EXECUTABLE_FILE_EXTENSION \".exe\"" >> base.h
-	echo "#define C_COMPILER \"$(CC)\"" >> base.h
-	echo "#define CC_OPT_VERSION_INFO \"--version\"" >> base.h
-	echo "#define CC_ERROR_FILEDES 2" >> base.h
-	echo "#define CC_VERSION_INFO_FILEDES 1" >> base.h
-	echo "#define LINKER_OPT_OUTPUT_FILE \"-o \"" >> base.h
-	echo "#define DEFAULT_STACK_SIZE 8388608" >> base.h
-	echo "#define ARCHIVER \"$(AR)\"" >> base.h
-	echo "#define ARCHIVER_OPT_REPLACE \"r \"" >> base.h
-	echo "#define FORMAT_LL_TRIGGERS_WARNINGS 1" >> base.h
-	echo "#define SYSTEM_LIBS \"$(SYSTEM_LIBS)\"" >> base.h
-	echo "#define SYSTEM_MATH_LIBS \"$(SYSTEM_MATH_LIBS)\"" >> base.h
-
-settings.h:
-	echo "#define MAKE_UTILITY_NAME \"$(MAKE)\"" > settings.h
-	echo "#define MAKEFILE_NAME \"mk_msys.mak\"" >> settings.h
-	echo "#define SEARCH_PATH_DELIMITER ';'" >> settings.h
-	echo "#define CONSOLE_WCHAR" >> settings.h
-	echo "#define os_getch _getwch" >> settings.h
-	echo "#define LIBRARY_FILE_EXTENSION \".a\"" >> settings.h
-	echo "#define CC_OPT_DEBUG_INFO \"-g\"" >> settings.h
-	echo "#define CC_OPT_NO_WARNINGS \"-w\"" >> settings.h
-	echo "#define LINKER_OPT_NO_DEBUG_INFO \"-Wl,--strip-debug\"" >> settings.h
-	echo "#define LINKER_OPT_STACK_SIZE \"-Wl,--stack,\"" >> settings.h
-	echo "#define LINKER_FLAGS \"-Wl,--gc-sections\"" >> settings.h
-	echo "#define SEED7_LIB \"$(SEED7_LIB)\"" >> settings.h
-	echo "#define DRAW_LIB \"$(DRAW_LIB)\"" >> settings.h
-	echo "#define CONSOLE_LIB \"$(CONSOLE_LIB)\"" >> settings.h
-	echo "#define DATABASE_LIB \"$(DATABASE_LIB)\"" >> settings.h
-	echo "#define COMP_DATA_LIB \"$(COMP_DATA_LIB)\"" >> settings.h
-	echo "#define COMPILER_LIB \"$(COMPILER_LIB)\"" >> settings.h
-
-version.h: chkccomp.exe base.h settings.h
-	./chkccomp.exe version.h "S7_LIB_DIR=$(S7_LIB_DIR)" "SEED7_LIBRARY=$(SEED7_LIBRARY)"
-	cp version.h vers_msys.h
-
-chkccomp.exe: chkccomp.c chkccomp.h base.h settings.h
-	$(CC) chkccomp.c -o chkccomp
-
-setwpath.exe: version.h setwpath.c
-	$(CC) setwpath.c -o setwpath
-
-wrdepend.exe: version.h wrdepend.c
-	$(CC) wrdepend.c -o wrdepend
+setwpath.exe: setwpath.c version.h
+	$(CC) $< -o setwpath
 
 sudo.exe: sudo.c
-	$(CC) sudo.c -w -o sudo
+	$(CC) $< -w -o sudo
 
-depend: version.h setwpath.exe wrdepend.exe sudo.exe
-	./wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(SRC) "> depend"
-	./wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(SEED7_LIB_SRC) ">> depend"
-	./wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(DRAW_LIB_SRC) ">> depend"
-	./wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(CONSOLE_LIB_SRC) ">> depend"
-	./wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(DATABASE_LIB_SRC_STD_INCL) ">> depend"
-	./wrdepend.exe OPTION=DB2_INCLUDE_OPTION $(CFLAGS) -M sql_db2.c ">> depend"
-	./wrdepend.exe OPTION=INFORMIX_INCLUDE_OPTION $(CFLAGS) -M sql_ifx.c ">> depend"
-	./wrdepend.exe OPTION=SQL_SERVER_INCLUDE_OPTION $(CFLAGS) -M sql_srv.c ">> depend"
-	./wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(COMP_DATA_LIB_SRC) ">> depend"
-	./wrdepend.exe OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(COMPILER_LIB_SRC) ">> depend"
-	@echo
-	@echo "  Use 'make' (with your make command) to create the interpreter."
-	@echo
+define chkccomp.h
+#define LIST_DIRECTORY_CONTENTS "dir"
+#define LINKER_OPT_STATIC_LINKING "-static"
+#define CC_FLAGS "-ffunction-sections -fdata-sections"
+#define CC_FLAGS64 "-Wa,-mbig-obj"
+#define CC_OPT_LINK_TIME_OPTIMIZATION "-flto=auto"
+#define CC_OPT_POSITION_INDEPENDENT_CODE "-fPIC"
+#define LINKER_OPT_NO_LTO "-fno-lto"
+#define POTENTIAL_PARTIAL_LINKING_OPTIONS "-r"
+#define USE_GMP $(USE_GMP)$(if $(BIGINT_LIBS),$(_nl)#define BIGINT_LIBS "$(BIGINT_LIBS)")
+#define SYSTEM_CONSOLE_LIBS "$(SYSTEM_CONSOLE_LIBS)"
+#define SYSTEM_DRAW_LIBS "$(SYSTEM_DRAW_LIBS)"
+#define INT_DIV_OVERFLOW_INFINITE_LOOP 1
+#define POSTGRESQL_USE_DLL
+endef
 
-../bin/$(SEED7_LIB): $(SEED7_LIB_OBJ)
-	$(AR) r ../bin/$(SEED7_LIB) $(SEED7_LIB_OBJ)
+define base.h
+#define PATH_DELIMITER 92 /* backslash (ASCII) */
+#define OS_STRI_WCHAR
+#define QUOTE_WHOLE_SHELL_COMMAND
+#define OBJECT_FILE_EXTENSION ".o"
+#define EXECUTABLE_FILE_EXTENSION "$(EXE_EXT)"
+#define C_COMPILER "$(CC)"
+#define CC_OPT_VERSION_INFO "--version"
+#define CC_ERROR_FILEDES 2
+#define CC_VERSION_INFO_FILEDES 1
+#define LINKER_OPT_OUTPUT_FILE "-o "
+#define DEFAULT_STACK_SIZE 8388608
+#define ARCHIVER "$(AR)"
+#define ARCHIVER_OPT_REPLACE "$(ARFLAGS) "
+#define FORMAT_LL_TRIGGERS_WARNINGS 1
+#define SYSTEM_LIBS "$(SYSTEM_LIBS)"
+#define SYSTEM_MATH_LIBS "$(SYSTEM_MATH_LIBS)"
+endef
 
-../bin/$(DRAW_LIB): $(DRAW_LIB_OBJ)
-	$(AR) r ../bin/$(DRAW_LIB) $(DRAW_LIB_OBJ)
-
-../bin/$(CONSOLE_LIB): $(CONSOLE_LIB_OBJ)
-	$(AR) r ../bin/$(CONSOLE_LIB) $(CONSOLE_LIB_OBJ)
-
-../bin/$(DATABASE_LIB): $(DATABASE_LIB_OBJ)
-	$(AR) r ../bin/$(DATABASE_LIB) $(DATABASE_LIB_OBJ)
-
-../bin/$(COMP_DATA_LIB): $(COMP_DATA_LIB_OBJ)
-	$(AR) r ../bin/$(COMP_DATA_LIB) $(COMP_DATA_LIB_OBJ)
-
-../bin/$(COMPILER_LIB): $(COMPILER_LIB_OBJ)
-	$(AR) r ../bin/$(COMPILER_LIB) $(COMPILER_LIB_OBJ)
-
-../bin/bas7.exe: ../prg/bas7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/bas7
-	mv ../prg/bas7.exe ../bin
-
-../bin/bigfiles.exe: ../prg/bigfiles.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/bigfiles
-	mv ../prg/bigfiles.exe ../bin
-
-../bin/calc7.exe: ../prg/calc7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/calc7
-	mv ../prg/calc7.exe ../bin
-
-../bin/cat.exe: ../prg/cat.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/cat
-	mv ../prg/cat.exe ../bin
-
-../bin/comanche.exe: ../prg/comanche.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/comanche
-	mv ../prg/comanche.exe ../bin
-
-../bin/db7.exe: ../prg/db7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/db7
-	mv ../prg/db7.exe ../bin
-
-../bin/diff7.exe: ../prg/diff7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/diff7
-	mv ../prg/diff7.exe ../bin
-
-../bin/find7.exe: ../prg/find7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/find7
-	mv ../prg/find7.exe ../bin
-
-../bin/findchar.exe: ../prg/findchar.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/findchar
-	mv ../prg/findchar.exe ../bin
-
-../bin/ftp7.exe: ../prg/ftp7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/ftp7
-	mv ../prg/ftp7.exe ../bin
-
-../bin/ftpserv.exe: ../prg/ftpserv.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/ftpserv
-	mv ../prg/ftpserv.exe ../bin
-
-../bin/hd.exe: ../prg/hd.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/hd
-	mv ../prg/hd.exe ../bin
-
-../bin/ide7.exe: ../prg/ide7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/ide7
-	mv ../prg/ide7.exe ../bin
-
-../bin/make7.exe: ../prg/make7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/make7
-	mv ../prg/make7.exe ../bin
-
-../bin/portfwd7.exe: ../prg/portfwd7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/portfwd7
-	mv ../prg/portfwd7.exe ../bin
-
-../bin/pv7.exe: ../prg/pv7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/pv7
-	mv ../prg/pv7.exe ../bin
-
-../bin/s7check.exe: ../prg/s7check.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/s7check
-	mv ../prg/s7check.exe ../bin
-
-../bin/sql7.exe: ../prg/sql7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/sql7
-	mv ../prg/sql7.exe ../bin
-
-../bin/sydir7.exe: ../prg/sydir7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/sydir7
-	mv ../prg/sydir7.exe ../bin
-
-../bin/tar7.exe: ../prg/tar7.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/tar7
-	mv ../prg/tar7.exe ../bin
-
-../bin/toutf8.exe: ../prg/toutf8.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/toutf8
-	mv ../prg/toutf8.exe ../bin
-
-../bin/which.exe: ../prg/which.sd7 ../bin/s7c.exe
-	../bin/s7c.exe -l ../lib -b ../bin -O3 -oc3 ../prg/which
-	mv ../prg/which.exe ../bin
-
-bas7: ../bin/bas7.exe
-bigfiles: ../bin/bigfiles.exe
-calc7: ../bin/calc7.exe
-cat: ../bin/cat.exe
-comanche: ../bin/comanche.exe
-db7: ../bin/db7.exe
-diff7: ../bin/diff7.exe
-find7: ../bin/find7.exe
-findchar: ../bin/findchar.exe
-ftp7: ../bin/ftp7.exe
-ftpserv: ../bin/ftpserv.exe
-hd: ../bin/hd.exe
-ide7: ../bin/ide7.exe
-make7: ../bin/make7.exe
-portfwd7: ../bin/portfwd7.exe
-pv7: ../bin/pv7.exe
-s7check: ../bin/s7check.exe
-sql7: ../bin/sql7.exe
-sydir7: ../bin/sydir7.exe
-tar7: ../bin/tar7.exe
-toutf8: ../bin/toutf8.exe
-which: ../bin/which.exe
-
-utils: ../bin/bas7.exe ../bin/bigfiles.exe ../bin/calc7.exe ../bin/cat.exe ../bin/comanche.exe ../bin/db7.exe \
-       ../bin/diff7.exe ../bin/find7.exe ../bin/findchar.exe ../bin/ftp7.exe ../bin/ftpserv.exe ../bin/hd.exe \
-       ../bin/ide7.exe ../bin/make7.exe ../bin/portfwd7.exe ../bin/pv7.exe ../bin/s7check.exe ../bin/sql7.exe \
-       ../bin/sydir7.exe ../bin/tar7.exe ../bin/toutf8.exe ../bin/which.exe
-
-wc: $(SRC)
-	@echo SRC:
-	wc $(SRC)
-	@echo SEED7_LIB_SRC:
-	wc $(SEED7_LIB_SRC)
-	@echo DRAW_LIB_SRC:
-	wc $(DRAW_LIB_SRC)
-	@echo CONSOLE_LIB_SRC:
-	wc $(CONSOLE_LIB_SRC)
-	@echo DATABASE_LIB_SRC:
-	wc $(DATABASE_LIB_SRC)
-	@echo COMP_DATA_LIB_SRC:
-	wc $(COMP_DATA_LIB_SRC)
-	@echo COMPILER_LIB_SRC:
-	wc $(COMPILER_LIB_SRC)
-
-lint: $(SRC)
-	lint -p $(SRC) $(ALL_SYSTEM_LIBS)
-
-lint2: $(SRC)
-	lint -Zn2048 $(SRC) $(ALL_SYSTEM_LIBS)
-
-ifeq (depend,$(wildcard depend))
-include depend
-endif
-
-ifeq (macros,$(wildcard macros))
-include macros
-endif
+define settings.h
+#define MAKE_UTILITY_NAME "$(MAKE)"
+#define MAKEFILE_NAME "$(MAKEFILE_NAME)"
+#define SEARCH_PATH_DELIMITER ';'
+#define CONSOLE_WCHAR
+#define os_getch _getwch
+#define LIBRARY_FILE_EXTENSION "$(LIB_EXT)"
+#define CC_OPT_DEBUG_INFO "-g"
+#define CC_OPT_NO_WARNINGS "-w"
+#define LINKER_OPT_NO_DEBUG_INFO "-Wl,--strip-debug"
+#define LINKER_OPT_STACK_SIZE "-Wl,--stack,"
+#define LINKER_FLAGS "-Wl,--gc-sections"
+#define SEED7_LIB "$(SEED7_LIB)"
+#define DRAW_LIB "$(DRAW_LIB)"
+#define CONSOLE_LIB "$(CONSOLE_LIB)"
+#define DATABASE_LIB "$(DATABASE_LIB)"
+#define COMP_DATA_LIB "$(COMP_DATA_LIB)"
+#define COMPILER_LIB "$(COMPILER_LIB)"
+endef

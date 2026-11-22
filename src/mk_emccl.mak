@@ -3,6 +3,11 @@
 #   make -f mk_emccl.mak depend
 #   make -f mk_emccl.mak
 
+.DEFAULT_GOAL := s7
+.DELETE_ON_ERROR:
+THIS_MAKEFILE := $(firstword $(MAKEFILE_LIST))
+MAKEFILE_NAME ?= $(notdir $(THIS_MAKEFILE))
+
 # CFLAGS = -O2 -fomit-frame-pointer -funroll-loops -Wall
 # CFLAGS = -O2 -fomit-frame-pointer -Wall -Wstrict-prototypes -Winline -Wconversion -Wshadow -Wpointer-arith
 CFLAGS = -O3 -g -gsource-map -ffunction-sections -fdata-sections -Wall -Wstrict-prototypes -Winline -Wconversion -Wshadow -Wpointer-arith
@@ -22,31 +27,37 @@ SYSTEM_LIBS = -lnodefs.js
 # SYSTEM_DATABASE_LIBS is defined in the file "macros". The program chkccomp.c writes it to "macros" when doing "make depend".
 # SYSTEM_DRAW_LIBS is defined in the file "macros". The program chkccomp.c writes it to "macros" when doing "make depend".
 SYSTEM_MATH_LIBS = -lm
-ALL_SYSTEM_LIBS = $(SYSTEM_LIBS) $(SYSTEM_BIGINT_LIBS) $(SYSTEM_CONSOLE_LIBS) $(SYSTEM_DATABASE_LIBS) $(SYSTEM_DRAW_LIBS) $(SYSTEM_MATH_LIBS)
-SEED7_LIB = seed7_05_emc.a
-DRAW_LIB = s7_draw_emc.a
-CONSOLE_LIB = s7_con_emc.a
-DATABASE_LIB = s7_db_emc.a
-COMP_DATA_LIB = s7_data_emc.a
-COMPILER_LIB = s7_comp_emc.a
+LIB_EXT = _emc.a
+USE_GMP ?= 0
+BIGINT_LIBS ?=
 SPECIAL_LIB = pre_js.js
-ALL_S7_LIBS = ../bin/$(COMPILER_LIB) ../bin/$(COMP_DATA_LIB) ../bin/$(DRAW_LIB) ../bin/$(CONSOLE_LIB) ../bin/$(DATABASE_LIB) ../bin/$(SEED7_LIB)
 # CC = em++
 CC = emcc
+CXX = em++
+HOST_CC ?= gcc
+AR = emar
+ARFLAGS = r
+RM ?= rm -f
 CC_ENVIRONMENT_INI = emcc_env.ini
 # Some make tools terminate with the error "make: node: Permission denied" if node is called directly.
 NODE = `which node`
 
-DSRC = big_rtl.c big_gmp.c cmd_unx.c dir_win.c dll_unx.c emc_utl.c fil_emc.c pcs_unx.c pol_unx.c \
-       soc_none.c tim_emc.c
-DRAW_LIB_SRC = gkb_rtl.c drw_emc.c gkb_emc.c
-CONSOLE_LIB_SRC = kbd_rtl.c con_emc.c
-
+include mk_lib.mak
 include mk_src.mak
+
+ALL_S7_LIBS = $(addprefix ../bin/,$(S7_LIBS))
+DSRC = $(EMC_DSRC)
+DRAW_LIB_SRC = $(EMC_DRAW_SRC)
+CONSOLE_LIB_SRC = $(EMC_CON_SRC)
+
 include mk_obj_o.mak
 
+EMCC_UTILS = $(filter-out db7 ide7,$(UTILS))
+UTILS_JS = $(addprefix ../bin/,$(addsuffix .js,$(UTILS)))
+UTILS_WASM = $(addprefix ../bin/,$(addsuffix .wasm,$(UTILS)))
+
 s7: next_lvl
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) ../bin/s7.js ../prg/s7.js
+	$(MAKE) -f $(THIS_MAKEFILE) ../bin/s7.js ../prg/s7.js
 	$(NODE) ../bin/s7.js -l ../lib level
 	$(NODE) --stack-size=8192 ../bin/s7.js -l ../lib -q ../prg/confval > ../bin/cc_conf_emcc.prop
 	@echo
@@ -59,7 +70,7 @@ s7c: ../bin/s7c.js ../prg/s7c.js
 	@echo
 
 ../bin/s7.js: $(OBJ) $(ALL_S7_LIBS) ../bin/$(SPECIAL_LIB)
-	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) --pre-js ../bin/$(SPECIAL_LIB) -o ../bin/s7.js
+	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) --pre-js ../bin/$(SPECIAL_LIB) -o $@
 
 ../prg/s7.js: ../bin/s7.js
 	ln -sf ../bin/s7.js ../prg
@@ -73,7 +84,7 @@ s7c: ../bin/s7c.js ../prg/s7c.js
 	$(NODE) --stack-size=8192 ../bin/s7.js -l ../lib ../prg/s7c -l ../lib -b ../bin -O2 ../prg/s7c
 
 levelup: levelup.c
-	gcc levelup.c -o levelup
+	$(HOST_CC) $< -o $@
 
 next_lvl: levelup
 	./levelup
@@ -93,29 +104,21 @@ sql_ifx.o: sql_ifx.c
 sql_srv.o: sql_srv.c
 	$(CC) $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(CFLAGS) $(INCLUDE_OPTIONS) -c $<
 
-.PHONY: clean s7 s7c test check install all next_lvl strip clean_utils distclean uninstall
+.PHONY: clean s7 s7c test minimal_test check install all next_lvl dep strip clean_utils distclean uninstall utils wc lint lint2 $(UTILS)
 
 clean:
-	rm -f *.o $(ALL_S7_LIBS) ../bin/s7.js ../bin/s7.wasm ../bin/$(CC_ENVIRONMENT_INI) ../bin/s7c.js ../bin/s7c.wasm ../bin/$(SPECIAL_LIB)
-	rm -f ../prg/s7.js ../prg/s7.wasm ../prg/s7c.js ../prg/s7c.wasm
-	rm -f depend macros chkccomp.h base.h settings.h version.h chkccomp wrdepend levelup next_lvl
+	$(RM) *.o $(ALL_S7_LIBS) ../bin/s7.js ../bin/s7.wasm ../bin/$(CC_ENVIRONMENT_INI) ../bin/s7c.js ../bin/s7c.wasm ../bin/$(SPECIAL_LIB)
+	$(RM) ../prg/s7.js ../prg/s7.wasm ../prg/s7c.js ../prg/s7c.wasm
+	$(RM) depend macros chkccomp.h base.h settings.h version.h chkccomp wrdepend levelup next_lvl
 	@echo
 	@echo "  Use 'make depend' (with your make command) to create the dependencies."
 	@echo
 
 clean_utils:
-	rm -f ../bin/bas7.js ../bin/bigfiles.js ../bin/calc7.js ../bin/cat.js ../bin/comanche.js ../bin/db7.js
-	rm -f ../bin/diff7.js ../bin/find7.js ../bin/findchar.js ../bin/ftp7.js ../bin/ftpserv.js ../bin/hd.js
-	rm -f ../bin/ide7.js ../bin/make7.js ../bin/portfwd7.js ../bin/pv7.js ../bin/s7check.js ../bin/sql7.js
-	rm -f ../bin/sydir7.js ../bin/tar7.js ../bin/toutf8.js ../bin/which.js
-	rm -f ../bin/bas7.wasm ../bin/bigfiles.wasm ../bin/calc7.wasm ../bin/cat.wasm ../bin/comanche.wasm ../bin/db7.wasm
-	rm -f ../bin/diff7.wasm ../bin/find7.wasm ../bin/findchar.wasm ../bin/ftp7.wasm ../bin/ftpserv.wasm ../bin/hd.wasm
-	rm -f ../bin/ide7.wasm ../bin/make7.wasm ../bin/portfwd7.wasm ../bin/pv7.wasm ../bin/s7check.wasm ../bin/sql7.wasm
-	rm -f ../bin/sydir7.wasm ../bin/tar7.wasm ../bin/toutf8.wasm ../bin/which.wasm
+	$(RM) $(UTILS_JS) $(UTILS_WASM)
 
 distclean: clean clean_utils
-	rm -f level_bk.h level.h
-	rm -f vers_emccl.h
+	$(RM) level_bk.h level.h vers_emccl.h
 
 test:
 	$(NODE) ../bin/s7.js -l ../lib ../prg/chk_all build
@@ -145,71 +148,83 @@ strip:
 	@echo "  Cannot strip."
 	@echo
 
-chkccomp.h:
-	echo "#define LIST_DIRECTORY_CONTENTS \"ls\"" > chkccomp.h
-	echo "#define UNIX_DO_SLEEP" >> chkccomp.h
-	echo "#define REMOVE_WASM" >> chkccomp.h
-	echo "#define USE_GMP 0" >> chkccomp.h
+define _nl
 
-base.h:
-	echo "#define PATH_DELIMITER '/'" > base.h
-	echo "#define OBJECT_FILE_EXTENSION \".o\"" >> base.h
-	echo "#define C_COMPILER \"$(CC)\"" >> base.h
-	echo "#define CC_OPT_VERSION_INFO \"--version\"" >> base.h
-	echo "#define CC_FLAGS \"\"" >> base.h
-	echo "#define CC_ERROR_FILEDES 2" >> base.h
-	echo "#define CC_VERSION_INFO_FILEDES 1" >> base.h
-	echo "#define LINKER_OPT_OUTPUT_FILE \"-o \"" >> base.h
-	echo "#define LINKED_PROGRAM_EXTENSION \".js\"" >> base.h
-	echo "#define INTERPRETER_FOR_LINKED_PROGRAM \"node\"" >> base.h
-	echo "#define MOUNT_NODEFS" >> base.h
-	echo "#define EMULATE_ENVIRONMENT" >> base.h
-	echo "#define EMULATE_NODE_ENVIRONMENT" >> base.h
-	echo "#define DETERMINE_OS_PROPERTIES_AT_RUNTIME" >> base.h
-	echo "#define SYSTEM_LIBS \"$(SYSTEM_LIBS)\"" >> base.h
 
-settings.h:
-	echo "#define MAKE_UTILITY_NAME \"$(MAKE)\"" > settings.h
-	echo "#define MAKEFILE_NAME \"mk_emccl.mak\"" >> settings.h
-	echo "#define SEARCH_PATH_DELIMITER 0" >> settings.h
-	echo "#define AWAIT_WITH_NANOSLEEP" >> settings.h
-	echo "#define IMPLEMENT_PTY_WITH_PIPE2" >> settings.h
-	echo "#define USE_EGL" >> settings.h
-	echo "#define CONSOLE_UTF8" >> settings.h
-	echo "#define OS_STRI_UTF8" >> settings.h
-	echo "#define ESCAPE_SHELL_COMMANDS" >> settings.h
-	echo "#define LIBRARY_FILE_EXTENSION \".a\"" >> settings.h
-	echo "#define USE_CONSOLE_FOR_PROT_CSTRI" >> settings.h
-	echo "#define DEFINE_SYSTEM_FUNCTION" >> settings.h
-	echo "#define USE_START_MAIN" >> settings.h
-	echo "#define USE_DO_EXIT" >> settings.h
-	echo "#define os_exit doExit" >> settings.h
-	echo "#define os_atexit registerExitFunction" >> settings.h
-	echo "#define CALL_C_COMPILER_FROM_SHELL 1" >> settings.h
-	echo "#define CPLUSPLUS_COMPILER \"em++\"" >> settings.h
-	echo "#define CC_OPT_DEBUG_INFO \"-g\"" >> settings.h
-	echo "#define CC_OPT_NO_WARNINGS \"-w\"" >> settings.h
-	echo "#define LINKER_OPT_SPECIAL_LIB \"--pre-js\"" >> settings.h
-	echo "#define LINKER_FLAGS \"$(LDFLAGS)\"" >> settings.h
-	echo "#define SEED7_LIB \"$(SEED7_LIB)\"" >> settings.h
-	echo "#define DRAW_LIB \"$(DRAW_LIB)\"" >> settings.h
-	echo "#define CONSOLE_LIB \"$(CONSOLE_LIB)\"" >> settings.h
-	echo "#define DATABASE_LIB \"$(DATABASE_LIB)\"" >> settings.h
-	echo "#define COMP_DATA_LIB \"$(COMP_DATA_LIB)\"" >> settings.h
-	echo "#define COMPILER_LIB \"$(COMPILER_LIB)\"" >> settings.h
-	echo "#define SPECIAL_LIB \"$(SPECIAL_LIB)\"" >> settings.h
+endef
+
+define chkccomp.h
+#define LIST_DIRECTORY_CONTENTS "ls"
+#define UNIX_DO_SLEEP
+#define REMOVE_WASM
+#define USE_GMP $(USE_GMP)$(if $(BIGINT_LIBS),$(_nl)#define BIGINT_LIBS "$(BIGINT_LIBS)")
+endef
+
+define base.h
+#define PATH_DELIMITER '/'
+#define OBJECT_FILE_EXTENSION ".o"
+#define C_COMPILER "$(CC)"
+#define CC_OPT_VERSION_INFO "--version"
+#define CC_FLAGS ""
+#define CC_ERROR_FILEDES 2
+#define CC_VERSION_INFO_FILEDES 1
+#define LINKER_OPT_OUTPUT_FILE "-o "
+#define LINKED_PROGRAM_EXTENSION ".js"
+#define INTERPRETER_FOR_LINKED_PROGRAM "node"
+#define MOUNT_NODEFS
+#define EMULATE_ENVIRONMENT
+#define EMULATE_NODE_ENVIRONMENT
+#define DETERMINE_OS_PROPERTIES_AT_RUNTIME
+#define SYSTEM_LIBS "$(SYSTEM_LIBS)"
+endef
+
+define settings.h
+#define MAKE_UTILITY_NAME "$(MAKE)"
+#define MAKEFILE_NAME "$(MAKEFILE_NAME)"
+#define SEARCH_PATH_DELIMITER 0
+#define AWAIT_WITH_NANOSLEEP
+#define IMPLEMENT_PTY_WITH_PIPE2
+#define USE_EGL
+#define CONSOLE_UTF8
+#define OS_STRI_UTF8
+#define ESCAPE_SHELL_COMMANDS
+#define LIBRARY_FILE_EXTENSION ".a"
+#define USE_CONSOLE_FOR_PROT_CSTRI
+#define DEFINE_SYSTEM_FUNCTION
+#define USE_START_MAIN
+#define USE_DO_EXIT
+#define os_exit doExit
+#define os_atexit registerExitFunction
+#define CALL_C_COMPILER_FROM_SHELL 1
+#define CPLUSPLUS_COMPILER "$(CXX)"
+#define CC_OPT_DEBUG_INFO "-g"
+#define CC_OPT_NO_WARNINGS "-w"
+#define LINKER_OPT_SPECIAL_LIB "--pre-js"
+#define LINKER_FLAGS "$(LDFLAGS)"
+#define SEED7_LIB "$(SEED7_LIB)"
+#define DRAW_LIB "$(DRAW_LIB)"
+#define CONSOLE_LIB "$(CONSOLE_LIB)"
+#define DATABASE_LIB "$(DATABASE_LIB)"
+#define COMP_DATA_LIB "$(COMP_DATA_LIB)"
+#define COMPILER_LIB "$(COMPILER_LIB)"
+#define SPECIAL_LIB "$(SPECIAL_LIB)"
+endef
+
+chkccomp.h base.h settings.h: export _HDR = $($@)
+chkccomp.h base.h settings.h:
+	@printf '%s\n' "$$_HDR" > $@
 
 version.h: chkccomp base.h settings.h
-	./chkccomp version.h "S7_LIB_DIR=$(S7_LIB_DIR)" "SEED7_LIBRARY=$(SEED7_LIBRARY)" "CC_ENVIRONMENT_INI=$(CC_ENVIRONMENT_INI)"
-	rm -f ctest*.wasm
+	./$< $@ "S7_LIB_DIR=$(S7_LIB_DIR)" "SEED7_LIBRARY=$(SEED7_LIBRARY)" "CC_ENVIRONMENT_INI=$(CC_ENVIRONMENT_INI)"
+	$(RM) ctest*.wasm
 	env > ../bin/$(CC_ENVIRONMENT_INI)
-	cp version.h vers_emccl.h
+	cp $@ vers_emccl.h
 
 chkccomp: chkccomp.c chkccomp.h base.h settings.h
-	gcc chkccomp.c -o chkccomp
+	$(HOST_CC) $< -o $@
 
-wrdepend: version.h wrdepend.c
-	gcc wrdepend.c -o wrdepend
+wrdepend: wrdepend.c version.h
+	$(HOST_CC) $< -o $@
 
 depend: version.h wrdepend
 	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M -c $(SRC) "> depend"
@@ -227,58 +242,25 @@ depend: version.h wrdepend
 	@echo
 
 ../bin/$(SEED7_LIB): $(SEED7_LIB_OBJ)
-	emar r ../bin/$(SEED7_LIB) $(SEED7_LIB_OBJ)
-
 ../bin/$(DRAW_LIB): $(DRAW_LIB_OBJ)
-	emar r ../bin/$(DRAW_LIB) $(DRAW_LIB_OBJ)
-
 ../bin/$(CONSOLE_LIB): $(CONSOLE_LIB_OBJ)
-	emar r ../bin/$(CONSOLE_LIB) $(CONSOLE_LIB_OBJ)
-
 ../bin/$(DATABASE_LIB): $(DATABASE_LIB_OBJ)
-	emar r ../bin/$(DATABASE_LIB) $(DATABASE_LIB_OBJ)
-
 ../bin/$(COMP_DATA_LIB): $(COMP_DATA_LIB_OBJ)
-	emar r ../bin/$(COMP_DATA_LIB) $(COMP_DATA_LIB_OBJ)
-
 ../bin/$(COMPILER_LIB): $(COMPILER_LIB_OBJ)
-	emar r ../bin/$(COMPILER_LIB) $(COMPILER_LIB_OBJ)
+$(ALL_S7_LIBS):
+	$(AR) $(ARFLAGS) $@ $^
 
 ../bin/$(SPECIAL_LIB): pre_js.js
-	cp pre_js.js ../bin/$(SPECIAL_LIB)
+	cp $< $@
 
 ../bin/%.js: ../prg/%.sd7 ../bin/s7c.js
 	$(NODE) --stack-size=8192 ../bin/s7c.js -l ../lib -b ../bin -O3 -oc3 $<
-	mv $(<:.sd7=.js) ../bin
+	mv $(<:.sd7=.js) $@
 	mv $(<:.sd7=.wasm) ../bin
 
-bas7: ../bin/bas7.js
-bigfiles: ../bin/bigfiles.js
-calc7: ../bin/calc7.js
-cat: ../bin/cat.js
-comanche: ../bin/comanche.js
-db7: ../bin/db7.js
-diff7: ../bin/diff7.js
-find7: ../bin/find7.js
-findchar: ../bin/findchar.js
-ftp7: ../bin/ftp7.js
-ftpserv: ../bin/ftpserv.js
-hd: ../bin/hd.js
-ide7: ../bin/ide7.js
-make7: ../bin/make7.js
-portfwd7: ../bin/portfwd7.js
-pv7: ../bin/pv7.js
-s7check: ../bin/s7check.js
-sql7: ../bin/sql7.js
-sydir7: ../bin/sydir7.js
-tar7: ../bin/tar7.js
-toutf8: ../bin/toutf8.js
-which: ../bin/which.js
+$(UTILS): %: ../bin/%.js
 
-utils: ../bin/bas7.js ../bin/bigfiles.js ../bin/calc7.js ../bin/cat.js ../bin/comanche.js \
-       ../bin/diff7.js ../bin/find7.js ../bin/findchar.js ../bin/ftp7.js ../bin/ftpserv.js ../bin/hd.js \
-       ../bin/make7.js ../bin/portfwd7.js ../bin/pv7.js ../bin/s7check.js ../bin/sql7.js \
-       ../bin/sydir7.js ../bin/tar7.js ../bin/toutf8.js ../bin/which.js
+utils: $(addprefix ../bin/,$(addsuffix .js,$(EMCC_UTILS)))
 
 wc: $(SRC)
 	@echo SRC:

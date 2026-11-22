@@ -1,240 +1,317 @@
-# Common Unix GNU-make rules shared by makefile, mk_linux.mak, mk_clang.mak,
-# mk_icc.mak, mk_osx.mak, mk_osxcl.mak, and mk_tcc_l.mak.
+# Common Unix/Cygwin/MSYS GNU-make rules shared by makefile, mk_linux.mak, mk_clang.mak,
+# mk_icc.mak, mk_osx.mak, mk_osxcl.mak, mk_tcc_l.mak, mk_cygw.mak, and mk_msys.mak.
+
+.DEFAULT_GOAL := s7
+.DELETE_ON_ERROR:
+THIS_MAKEFILE := $(firstword $(MAKEFILE_LIST))
+MAKEFILE_NAME ?= $(notdir $(THIS_MAKEFILE))
+
+ifneq ($(and $(filter command environment,$(origin PREFIX)),$(PREFIX))$(and $(filter command environment,$(origin DESTDIR)),$(DESTDIR)),)
+INSTALL_MODE ?= copy
+else
+INSTALL_MODE ?= symlink
+endif
+
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+ifeq ($(INSTALL_MODE),copy)
+MANDIR ?= $(PREFIX)/share/man/man1
+else
+MANDIR ?= /usr/share/man/man1
+endif
+DESTDIR ?=
+INSTALL ?= install
 
 AR ?= ar
+ARFLAGS = r
+RM ?= rm -f
+STRIP ?= strip
 SYSTEM_MATH_LIBS ?= -lm
-ALL_SYSTEM_LIBS = $(SYSTEM_LIBS) $(SYSTEM_BIGINT_LIBS) $(SYSTEM_CONSOLE_LIBS) $(SYSTEM_DATABASE_LIBS) $(SYSTEM_DRAW_LIBS) $(SYSTEM_MATH_LIBS)
-SEED7_LIB = seed7_05.a
-DRAW_LIB = s7_draw.a
-CONSOLE_LIB = s7_con.a
-DATABASE_LIB = s7_db.a
-COMP_DATA_LIB = s7_data.a
-COMPILER_LIB = s7_comp.a
-ALL_S7_LIBS = ../bin/$(COMPILER_LIB) ../bin/$(COMP_DATA_LIB) ../bin/$(DRAW_LIB) ../bin/$(CONSOLE_LIB) ../bin/$(DATABASE_LIB) ../bin/$(SEED7_LIB)
+EXE_EXT ?=
+LIB_EXT ?= .a
+
+include mk_lib.mak
+include mk_src.mak
+
+ALL_S7_LIBS = $(addprefix ../bin/,$(S7_LIBS))
 
 S7_LDFLAGS ?= $(LDFLAGS)
+S7_OUT ?= $@
+PRG_S7_STYLE ?= symlink
+CP_S7C ?= cp -p
 SQL_PARTIAL_LINK ?= yes
 SQL_CFLAGS ?= $(CFLAGS_NO_FLTO)
 INSTALL_STYLE ?= unix
 HAS_DEPEND ?= yes
-CHKCCOMP_TRAPV ?= no
+RUN_WARN ?= yes
+DEPEND_EXTRA_TOOLS ?=
+CLEAN_EXTRA ?=
+VERSION_EXTRA_ARGS ?= "LINK_TIME=$(LINK_TIME)"
+TEST_INSTALL_HINT ?= sudo
+STRIP_TARGETS ?= ../bin/s7$(EXE_EXT) ../bin/s7c$(EXE_EXT) $(ALL_S7_LIBS)
 
-DSRC = big_rtl.c big_gmp.c cmd_unx.c dir_win.c dll_unx.c fil_unx.c pcs_unx.c pol_unx.c soc_none.c \
-       tim_unx.c
-DRAW_LIB_SRC = gkb_rtl.c drw_x11.c gkb_x11.c fwd_x11.c
-CONSOLE_LIB_SRC = kbd_rtl.c con_inf.c kbd_inf.c kbd_poll.c trm_inf.c trm_cap.c fwd_term.c
+CC_OPT_LTO ?= -flto=auto
+CC_OPT_PIC ?= -fPIC
+LINKER_OPT_STATIC ?= -static
+LINKER_OPT_NO_LTO ?= -fno-lto
+LINKER_OPT_DYN_LINK_LIBS ?= -ldl
+PARTIAL_LINK_OPTS ?= "-r", "-r -nostdlib"
+X11_LIBRARY_PATH ?=
+USE_GMP ?= 0
+BIGINT_LIBS ?=
+ALLOW_REPLACE_SYS_HDRS ?= yes
 
-include mk_src.mak
+CC_OPT_TRAP_OVERFLOW ?=
+CC_OPT_VERSION_INFO ?= --version
+CC_FLAGS ?= -ffunction-sections -fdata-sections
+BASE_ARCHIVER ?= yes
+CHKCCOMP_FLAGS ?= $(CC_OPT_TRAP_OVERFLOW)
+
+SETTINGS_DSO_HANDLE ?= no
+LINKER_OPT_NO_DEBUG_INFO ?= -Wl,--strip-debug
+
+DSRC ?= $(UNX_DSRC)
+DRAW_LIB_SRC ?= $(X11_DRAW_SRC)
+CONSOLE_LIB_SRC ?= $(UNX_CON_SRC)
+
 include mk_obj_o.mak
 
+UTILS_BIN = $(addprefix ../bin/,$(addsuffix $(EXE_EXT),$(UTILS)))
+
 s7: next_lvl
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) ../bin/s7 ../prg/s7
-	../bin/s7 -l ../lib level
+	$(MAKE) -f $(THIS_MAKEFILE) ../bin/s7$(EXE_EXT) ../prg/s7$(EXE_EXT)
+	../bin/s7$(EXE_EXT) -l ../lib level
 	@echo
 	@echo "  Use 'make s7c' (with your make command) to create the compiler."
 	@echo
 
-s7c: ../bin/s7c ../prg/s7c
+s7c: ../bin/s7c$(EXE_EXT) ../prg/s7c$(EXE_EXT)
 	@echo
 	@echo "  Use 'make test' (with your make command) to check Seed7."
 	@echo
 
-../bin/s7: $(OBJ) $(ALL_S7_LIBS)
-	$(CC) $(S7_LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ../bin/s7
+../bin/s7$(EXE_EXT): $(OBJ) $(ALL_S7_LIBS)
+	$(CC) $(S7_LDFLAGS) $^ $(ALL_SYSTEM_LIBS) -o $(S7_OUT)
 
-../prg/s7:
-	ln -sf ../bin/s7 ../prg
+ifeq ($(PRG_S7_STYLE),copy)
+../prg/s7$(EXE_EXT): ../bin/s7$(EXE_EXT)
+	cp $< ../prg
+else
+../prg/s7$(EXE_EXT):
+	ln -sf ../bin/s7$(EXE_EXT) ../prg
+endif
 
-../bin/s7c: ../prg/s7c
-	cp -p ../prg/s7c ../bin
+../bin/s7c$(EXE_EXT): ../prg/s7c$(EXE_EXT)
+	$(CP_S7C) $< $@
 
-../prg/s7c: ../prg/s7c.sd7 $(ALL_S7_LIBS)
-	../bin/s7 -l ../lib ../prg/s7c -l ../lib -b ../bin -O2 ../prg/s7c
+../prg/s7c$(EXE_EXT): ../prg/s7c.sd7 $(ALL_S7_LIBS)
+	../bin/s7$(EXE_EXT) -l ../lib ../prg/s7c -l ../lib -b ../bin -O2 $<
 
-levelup: levelup.c
-	$(CC) levelup.c -o levelup
+levelup$(EXE_EXT): levelup.c
+	$(CC) $< -o $@
 
-next_lvl: levelup
-	./levelup
+next_lvl: levelup$(EXE_EXT)
+	./levelup$(EXE_EXT)
+
+sql_db2.o: SQL_INC = $(DB2_INCLUDE_OPTION)
+sql_db2.o: SQL_LIBS = $(DB2_LIBS)
+sql_db2.o: SQL_CC_OPT = $(DB2_CC_OPTION)
+
+sql_ifx.o: SQL_INC = $(INFORMIX_INCLUDE_OPTION)
+sql_ifx.o: SQL_LIBS = $(INFORMIX_LIBS)
+sql_ifx.o: SQL_CC_OPT = $(INFORMIX_CC_OPTION)
+
+sql_srv.o: SQL_INC = $(SQL_SERVER_INCLUDE_OPTION)
+sql_srv.o: SQL_LIBS = $(SQL_SERVER_LIBS)
+sql_srv.o: SQL_CC_OPT = $(SQL_SERVER_CC_OPTION)
 
 ifeq ($(SQL_PARTIAL_LINK),yes)
-OBJCOPY_PARAMS = \
-       -L SQLAllocHandle -L SQLBindCol -L SQLBindParameter -L SQLBrowseConnectW -L SQLColAttributeW \
-       -L SQLConnectW -L SQLDataSources -L SQLDescribeColW -L SQLDescribeParam -L SQLDisconnect \
-       -L SQLDriverConnectW -L SQLDriversW -L SQLEndTran -L SQLExecute -L SQLFetch -L SQLFreeHandle \
-       -L SQLFreeStmt -L SQLGetConnectAttrW -L SQLGetData -L SQLGetDiagRecW -L SQLGetInfoW \
-       -L SQLGetStmtAttrW -L SQLGetTypeInfoW -L SQLNumParams -L SQLNumResultCols -L SQLPrepareW \
-       -L SQLSetConnectAttrW -L SQLSetDescFieldW -L SQLSetEnvAttr
-
-sql_db2.o: sql_db2.c sql_cli.c sql_log.c
-	$(CC) $(CPPFLAGS) $(DB2_INCLUDE_OPTION) $(SQL_CFLAGS) $< $(DB2_LIBS) $(DB2_CC_OPTION) -o $@
+sql_db2.o sql_ifx.o sql_srv.o: %.o: %.c sql_cli.c sql_log.c
+	$(CC) $(CPPFLAGS) $(SQL_INC) $(SQL_CFLAGS) $< $(SQL_LIBS) $(SQL_CC_OPT) -o $@
 	$(OBJCOPY) $(OBJCOPY_PARAMS) $@
-
-sql_ifx.o: sql_ifx.c sql_cli.c sql_log.c
-	$(CC) $(CPPFLAGS) $(INFORMIX_INCLUDE_OPTION) $(SQL_CFLAGS) $< $(INFORMIX_LIBS) $(INFORMIX_CC_OPTION) -o $@
-	$(OBJCOPY) $(OBJCOPY_PARAMS) $@
-
-sql_srv.o: sql_srv.c sql_cli.c sql_log.c
-	$(CC) $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(SQL_CFLAGS) $< $(SQL_SERVER_LIBS) $(SQL_SERVER_CC_OPTION) -o $@
-	$(OBJCOPY) $(OBJCOPY_PARAMS) $@
-endif
-
-ifeq ($(SQL_PARTIAL_LINK),no)
-sql_db2.o: sql_db2.c
-	$(CC) -c $(CPPFLAGS) $(DB2_INCLUDE_OPTION) $(SQL_CFLAGS) $< -o $@
-
-sql_ifx.o: sql_ifx.c
-	$(CC) -c $(CPPFLAGS) $(INFORMIX_INCLUDE_OPTION) $(SQL_CFLAGS) $< -o $@
-
-sql_srv.o: sql_srv.c
-	$(CC) -c $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(SQL_CFLAGS) $< -o $@
-endif
-
-ifeq ($(MAKEFILE_NAME),makefile)
-all: depend
-	$(MAKE) s7
-	$(MAKE) s7c
 else
-all: depend
-	$(MAKE) -f $(MAKEFILE_NAME) s7
-	$(MAKE) -f $(MAKEFILE_NAME) s7c
+sql_db2.o sql_ifx.o sql_srv.o: %.o: %.c
+	$(CC) -c $(CPPFLAGS) $(SQL_INC) $(SQL_CFLAGS) $< -o $@
 endif
 
-.PHONY: clean s7 s7c test check install all next_lvl strip clean_utils distclean uninstall
+all: depend
+	$(MAKE) -f $(THIS_MAKEFILE) s7
+	$(MAKE) -f $(THIS_MAKEFILE) s7c
+
+.PHONY: clean s7 s7c test minimal_test check install all next_lvl strip clean_utils distclean uninstall utils wc lint lint2 cppcheck $(UTILS)
 
 clean:
-	rm -f *.o $(ALL_S7_LIBS) ../bin/s7 ../bin/s7c ../prg/s7 ../prg/s7c depend macros chkccomp.h base.h settings.h version.h chkccomp wrdepend levelup next_lvl
+	$(RM) *.o $(ALL_S7_LIBS) ../bin/s7$(EXE_EXT) ../bin/s7c$(EXE_EXT) ../prg/s7$(EXE_EXT) ../prg/s7c$(EXE_EXT) depend macros chkccomp.h base.h settings.h version.h chkccomp$(EXE_EXT) wrdepend$(EXE_EXT) $(DEPEND_EXTRA_TOOLS) levelup$(EXE_EXT) next_lvl
+ifneq ($(CLEAN_EXTRA),)
+	$(RM) $(CLEAN_EXTRA)
+endif
 	@echo
 	@echo "  Use 'make depend' (with your make command) to create the dependencies."
 	@echo
 
 clean_utils:
-	rm -f ../bin/bas7 ../bin/bigfiles ../bin/calc7 ../bin/cat ../bin/comanche ../bin/db7 ../bin/diff7 ../bin/find7 ../bin/findchar ../bin/ftp7
-	rm -f ../bin/ftpserv ../bin/hd ../bin/ide7 ../bin/make7 ../bin/portfwd7 ../bin/pv7 ../bin/s7check ../bin/sql7 ../bin/sydir7 ../bin/tar7 ../bin/toutf8 ../bin/which
+	$(RM) $(UTILS_BIN)
 
 distclean: clean clean_utils
-	rm -f level_bk.h level.h
-	rm -f $(VERS_FILE)
+	$(RM) level_bk.h level.h $(VERS_FILE)
 
 test:
-	../bin/s7 -l ../lib ../prg/chk_all build
+	../bin/s7$(EXE_EXT) -l ../lib ../prg/chk_all build
+ifeq ($(TEST_INSTALL_HINT),sudo)
 	@echo
 	@echo "  Use 'sudo make install' (with your make command) to install Seed7."
 	@echo
+else ifeq ($(TEST_INSTALL_HINT),plain)
+	@echo
+	@echo "  Use 'make install' (with your make command) to install Seed7."
+	@echo
+else ifeq ($(TEST_INSTALL_HINT),msys)
+	@echo
+	@echo "  Use './sudo make install' (with your make command) to install Seed7."
+	@echo "  Or open a console as administrator, go to the directory seed7/src"
+	@echo "  and use 'make install' (with your make command) to install Seed7."
+	@echo
+endif
 
 minimal_test:
-	../bin/s7 -l ../lib ../prg/chk_all build minimal_test
+	../bin/s7$(EXE_EXT) -l ../lib ../prg/chk_all build minimal_test
 
 check: test
 
-ifeq ($(INSTALL_STYLE),osx)
+ifeq ($(INSTALL_STYLE),setwpath)
+install: setwpath.exe
+	./setwpath.exe add ../bin
+
+uninstall: setwpath.exe
+	./setwpath.exe remove ../bin
+else
+ifeq ($(INSTALL_MODE),copy)
 install:
-	mkdir -p /usr/local/bin
-	cd ../bin; ln -fs `pwd`/s7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/s7c /usr/local/bin
+	mkdir -p "$(DESTDIR)$(BINDIR)" "$(DESTDIR)$(MANDIR)"
+	$(INSTALL) -m 755 ../bin/s7$(EXE_EXT) ../bin/s7c$(EXE_EXT) "$(DESTDIR)$(BINDIR)"
+	for prog in $(INSTALL_UTILS); do \
+		if [ -f "../bin/$$prog$(EXE_EXT)" ]; then $(INSTALL) -m 755 "../bin/$$prog$(EXE_EXT)" "$(DESTDIR)$(BINDIR)"; fi; \
+	done
+	gzip -c ../doc/s7.1 > "$(DESTDIR)$(MANDIR)/s7.1.gz"
+	gzip -c ../doc/s7c.1 > "$(DESTDIR)$(MANDIR)/s7c.1.gz"
+ifneq ($(S7_LIB_DIR),)
+	mkdir -p "$(DESTDIR)$(S7_LIB_DIR)"
+	$(INSTALL) -m 644 $(ALL_S7_LIBS) "$(DESTDIR)$(S7_LIB_DIR)"
+endif
+ifneq ($(SEED7_LIBRARY),)
+	mkdir -p "$(DESTDIR)$(SEED7_LIBRARY)"
+	$(INSTALL) -m 644 ../lib/*.s7i "$(DESTDIR)$(SEED7_LIBRARY)"
+endif
+else ifeq ($(INSTALL_STYLE),osx)
+install:
+	mkdir -p "$(DESTDIR)$(BINDIR)"
+	cd ../bin && bin_dir="$$(pwd)" && for prog in s7 s7c $(INSTALL_UTILS); do \
+		ln -fs "$$bin_dir/$$prog$(EXE_EXT)" "$(DESTDIR)$(BINDIR)"; \
+	done
 	gzip -c ../doc/s7.1 > ../doc/s7.1.gz
-	-mv ../doc/s7.1.gz /usr/share/man/man1
+	-mv ../doc/s7.1.gz "$(DESTDIR)$(MANDIR)"
 	gzip -c ../doc/s7c.1 > ../doc/s7c.1.gz
-	-mv ../doc/s7c.1.gz /usr/share/man/man1
-	cd ../bin; ln -fs `pwd`/bas7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/calc7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/db7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/diff7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/find7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/ftp7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/ide7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/make7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/portfwd7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/pv7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/s7check /usr/local/bin
-	cd ../bin; ln -fs `pwd`/sql7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/sydir7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/tar7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/toutf8 /usr/local/bin
+	-mv ../doc/s7c.1.gz "$(DESTDIR)$(MANDIR)"
 else
 install:
-	cd ../bin; ln -fs `pwd`/s7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/s7c /usr/local/bin
-	gzip -c ../doc/s7.1 > /usr/share/man/man1/s7.1.gz
-	gzip -c ../doc/s7c.1 > /usr/share/man/man1/s7c.1.gz
-	cd ../bin; ln -fs `pwd`/bas7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/calc7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/db7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/diff7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/find7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/ftp7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/ide7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/make7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/portfwd7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/pv7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/s7check /usr/local/bin
-	cd ../bin; ln -fs `pwd`/sql7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/sydir7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/tar7 /usr/local/bin
-	cd ../bin; ln -fs `pwd`/toutf8 /usr/local/bin
+	mkdir -p "$(DESTDIR)$(BINDIR)" "$(DESTDIR)$(MANDIR)"
+	cd ../bin && bin_dir="$$(pwd)" && for prog in s7 s7c $(INSTALL_UTILS); do \
+		ln -fs "$$bin_dir/$$prog$(EXE_EXT)" "$(DESTDIR)$(BINDIR)"; \
+	done
+	gzip -c ../doc/s7.1 > "$(DESTDIR)$(MANDIR)/s7.1.gz"
+	gzip -c ../doc/s7c.1 > "$(DESTDIR)$(MANDIR)/s7c.1.gz"
 endif
 
 uninstall:
-	rm -f /usr/local/bin/s7
-	rm -f /usr/local/bin/s7c
-	rm -f /usr/share/man/man1/s7.1.gz
-	rm -f /usr/share/man/man1/s7c.1.gz
-	rm -f /usr/local/bin/bas7
-	rm -f /usr/local/bin/calc7
-	rm -f /usr/local/bin/db7
-	rm -f /usr/local/bin/diff7
-	rm -f /usr/local/bin/find7
-	rm -f /usr/local/bin/ftp7
-	rm -f /usr/local/bin/ide7
-	rm -f /usr/local/bin/make7
-	rm -f /usr/local/bin/portfwd7
-	rm -f /usr/local/bin/pv7
-	rm -f /usr/local/bin/s7check
-	rm -f /usr/local/bin/sql7
-	rm -f /usr/local/bin/sydir7
-	rm -f /usr/local/bin/tar7
-	rm -f /usr/local/bin/toutf8
-
-strip:
-	strip ../bin/s7
-	strip ../bin/s7c
-	strip ../bin/$(SEED7_LIB)
-	strip ../bin/$(DRAW_LIB)
-	strip ../bin/$(CONSOLE_LIB)
-	strip ../bin/$(DATABASE_LIB)
-	strip ../bin/$(COMP_DATA_LIB)
-	strip ../bin/$(COMPILER_LIB)
-
-version.h: chkccomp base.h settings.h
-	./chkccomp version.h "S7_LIB_DIR=$(S7_LIB_DIR)" "SEED7_LIBRARY=$(SEED7_LIBRARY)" "LINK_TIME=$(LINK_TIME)"
-	cp version.h $(VERS_FILE)
-
-ifeq ($(CHKCCOMP_TRAPV),yes)
-chkccomp: chkccomp.c chkccomp.h base.h settings.h
-	$(CC) -ftrapv chkccomp.c -o chkccomp
-else
-chkccomp: chkccomp.c chkccomp.h base.h settings.h
-	$(CC) chkccomp.c -o chkccomp
+	$(RM) $(addprefix $(DESTDIR)$(BINDIR)/,$(addsuffix $(EXE_EXT),s7 s7c $(INSTALL_UTILS))) \
+	      $(DESTDIR)$(MANDIR)/s7.1.gz $(DESTDIR)$(MANDIR)/s7c.1.gz
+ifneq ($(S7_LIB_DIR),)
+	$(RM) $(addprefix $(DESTDIR)$(S7_LIB_DIR)/,$(S7_LIBS))
+endif
+ifneq ($(SEED7_LIBRARY),)
+	$(RM) $(DESTDIR)$(SEED7_LIBRARY)/*.s7i
+endif
 endif
 
-ifeq ($(HAS_DEPEND),yes)
-wrdepend: version.h wrdepend.c
-	$(CC) wrdepend.c -o wrdepend
+strip:
+	$(STRIP) $(STRIP_TARGETS)
 
-depend: version.h wrdepend
-	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(SRC) "> depend"
-	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(SEED7_LIB_SRC) ">> depend"
-	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(DRAW_LIB_SRC) ">> depend"
-	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(CONSOLE_LIB_SRC) ">> depend"
-	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(DATABASE_LIB_SRC_STD_INCL) ">> depend"
-	./wrdepend OPTION=DB2_INCLUDE_OPTION $(CFLAGS) -M sql_db2.c ">> depend"
-	./wrdepend OPTION=INFORMIX_INCLUDE_OPTION $(CFLAGS) -M sql_ifx.c ">> depend"
-	./wrdepend OPTION=SQL_SERVER_INCLUDE_OPTION $(CFLAGS) -M sql_srv.c ">> depend"
-	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(COMP_DATA_LIB_SRC) ">> depend"
-	./wrdepend OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(COMPILER_LIB_SRC) ">> depend"
+define _nl
+
+
+endef
+
+define chkccomp.h
+#define LIST_DIRECTORY_CONTENTS "ls"$(if $(CC_OPT_LTO),$(_nl)#define CC_OPT_LINK_TIME_OPTIMIZATION "$(CC_OPT_LTO)")$(if $(CC_OPT_PIC),$(_nl)#define CC_OPT_POSITION_INDEPENDENT_CODE "$(CC_OPT_PIC)")$(if $(LINKER_OPT_STATIC),$(_nl)#define LINKER_OPT_STATIC_LINKING "$(LINKER_OPT_STATIC)")$(if $(LINKER_OPT_NO_LTO),$(_nl)#define LINKER_OPT_NO_LTO "$(LINKER_OPT_NO_LTO)")$(if $(LINKER_OPT_DYN_LINK_LIBS),$(_nl)#define LINKER_OPT_DYN_LINK_LIBS "$(LINKER_OPT_DYN_LINK_LIBS)")$(if $(PARTIAL_LINK_OPTS),$(_nl)#define POTENTIAL_PARTIAL_LINKING_OPTIONS $(PARTIAL_LINK_OPTS))$(if $(X11_LIBRARY_PATH),$(_nl)#define X11_LIBRARY_PATH "$(X11_LIBRARY_PATH)")
+#define USE_GMP $(USE_GMP)$(if $(BIGINT_LIBS),$(_nl)#define BIGINT_LIBS "$(BIGINT_LIBS)")$(if $(filter yes,$(ALLOW_REPLACE_SYS_HDRS)),$(_nl)#define ALLOW_REPLACEMENT_OF_SYSTEM_HEADERS)
+endef
+
+define base.h
+#define PATH_DELIMITER '/'
+#define OBJECT_FILE_EXTENSION ".o"
+#define C_COMPILER "$(CC)"$(if $(CC_OPT_TRAP_OVERFLOW),$(_nl)#define CC_OPT_TRAP_OVERFLOW "$(CC_OPT_TRAP_OVERFLOW)")
+#define CC_OPT_VERSION_INFO "$(CC_OPT_VERSION_INFO)"
+#define CC_FLAGS "$(CC_FLAGS)"
+#define CC_ERROR_FILEDES 2
+#define CC_VERSION_INFO_FILEDES 1
+#define LINKER_OPT_OUTPUT_FILE "-o "$(if $(filter yes,$(BASE_ARCHIVER)),$(_nl)#define ARCHIVER "$(AR)"$(_nl)#define ARCHIVER_OPT_REPLACE "$(ARFLAGS) ")
+#define SYSTEM_LIBS "$(SYSTEM_LIBS)"
+#define SYSTEM_MATH_LIBS "$(SYSTEM_MATH_LIBS)"
+endef
+
+define settings.h
+#define MAKE_UTILITY_NAME "$(MAKE)"
+#define MAKEFILE_NAME "$(MAKEFILE_NAME)"
+#define SEARCH_PATH_DELIMITER ':'
+#define AWAIT_WITH_SELECT$(if $(filter yes,$(SETTINGS_DSO_HANDLE)),$(_nl)#define DEFINE_DSO_HANDLE)
+#define SIGNAL_HANDLER_CAN_DO_IO
+#define CONSOLE_UTF8
+#define OS_STRI_UTF8
+#define ESCAPE_SHELL_COMMANDS
+#define LIBRARY_FILE_EXTENSION "$(LIB_EXT)"$(if $(CXX),$(_nl)#define CPLUSPLUS_COMPILER "$(CXX)")
+#define CC_SOURCE_UTF8
+#define CC_OPT_DEBUG_INFO "-g"
+#define CC_OPT_NO_WARNINGS "-w"$(if $(LINKER_OPT_NO_DEBUG_INFO),$(_nl)#define LINKER_OPT_NO_DEBUG_INFO "$(LINKER_OPT_NO_DEBUG_INFO)")
+#define LINKER_FLAGS "$(LDFLAGS)"
+#define SEED7_LIB "$(SEED7_LIB)"
+#define DRAW_LIB "$(DRAW_LIB)"
+#define CONSOLE_LIB "$(CONSOLE_LIB)"
+#define DATABASE_LIB "$(DATABASE_LIB)"
+#define COMP_DATA_LIB "$(COMP_DATA_LIB)"
+#define COMPILER_LIB "$(COMPILER_LIB)"
+endef
+
+chkccomp.h base.h settings.h: export _HDR = $($@)
+chkccomp.h base.h settings.h:
+	@printf '%s\n' "$$_HDR" > $@
+
+version.h: chkccomp$(EXE_EXT) base.h settings.h
+	./$< $@ "S7_LIB_DIR=$(S7_LIB_DIR)" "SEED7_LIBRARY=$(SEED7_LIBRARY)" $(VERSION_EXTRA_ARGS)
+	cp $@ $(VERS_FILE)
+
+chkccomp$(EXE_EXT): chkccomp.c chkccomp.h base.h settings.h
+	$(CC) $(CHKCCOMP_FLAGS) $< -o $@
+
+ifeq ($(HAS_DEPEND),yes)
+wrdepend$(EXE_EXT): wrdepend.c version.h
+	$(CC) $< -o $@
+
+depend: version.h wrdepend$(EXE_EXT) $(DEPEND_EXTRA_TOOLS)
+	./wrdepend$(EXE_EXT) OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(SRC) "> depend"
+	./wrdepend$(EXE_EXT) OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(SEED7_LIB_SRC) ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(DRAW_LIB_SRC) ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(CONSOLE_LIB_SRC) ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(DATABASE_LIB_SRC_STD_INCL) ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=DB2_INCLUDE_OPTION $(CFLAGS) -M sql_db2.c ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=INFORMIX_INCLUDE_OPTION $(CFLAGS) -M sql_ifx.c ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=SQL_SERVER_INCLUDE_OPTION $(CFLAGS) -M sql_srv.c ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(COMP_DATA_LIB_SRC) ">> depend"
+	./wrdepend$(EXE_EXT) OPTION=INCLUDE_OPTIONS $(CFLAGS) -M $(COMPILER_LIB_SRC) ">> depend"
+ifeq ($(RUN_WARN),yes)
 	$(CC) warn.c -o warn
 	@./warn
-	@rm warn
+	@$(RM) warn
+endif
 	@echo
 	@echo "  Use 'make' (with your make command) to create the interpreter."
 	@echo
@@ -247,54 +324,21 @@ depend: version.h
 endif
 
 ../bin/$(SEED7_LIB): $(SEED7_LIB_OBJ)
-	$(AR) r ../bin/$(SEED7_LIB) $(SEED7_LIB_OBJ)
-
 ../bin/$(DRAW_LIB): $(DRAW_LIB_OBJ)
-	$(AR) r ../bin/$(DRAW_LIB) $(DRAW_LIB_OBJ)
-
 ../bin/$(CONSOLE_LIB): $(CONSOLE_LIB_OBJ)
-	$(AR) r ../bin/$(CONSOLE_LIB) $(CONSOLE_LIB_OBJ)
-
 ../bin/$(DATABASE_LIB): $(DATABASE_LIB_OBJ)
-	$(AR) r ../bin/$(DATABASE_LIB) $(DATABASE_LIB_OBJ)
-
 ../bin/$(COMP_DATA_LIB): $(COMP_DATA_LIB_OBJ)
-	$(AR) r ../bin/$(COMP_DATA_LIB) $(COMP_DATA_LIB_OBJ)
-
 ../bin/$(COMPILER_LIB): $(COMPILER_LIB_OBJ)
-	$(AR) r ../bin/$(COMPILER_LIB) $(COMPILER_LIB_OBJ)
+$(ALL_S7_LIBS):
+	$(AR) $(ARFLAGS) $@ $^
 
-../bin/%: ../prg/%.sd7 ../bin/s7c
-	../bin/s7c -l ../lib -b ../bin -O3 -oc3 $<
-	mv $(<:.sd7=) ../bin
+../bin/%$(EXE_EXT): ../prg/%.sd7 ../bin/s7c$(EXE_EXT)
+	../bin/s7c$(EXE_EXT) -l ../lib -b ../bin -O3 -oc3 $<
+	mv $(<:.sd7=$(EXE_EXT)) $@
 
-bas7: ../bin/bas7
-bigfiles: ../bin/bigfiles
-calc7: ../bin/calc7
-cat: ../bin/cat
-comanche: ../bin/comanche
-db7: ../bin/db7
-diff7: ../bin/diff7
-find7: ../bin/find7
-findchar: ../bin/findchar
-ftp7: ../bin/ftp7
-ftpserv: ../bin/ftpserv
-hd: ../bin/hd
-ide7: ../bin/ide7
-make7: ../bin/make7
-portfwd7: ../bin/portfwd7
-pv7: ../bin/pv7
-s7check: ../bin/s7check
-sql7: ../bin/sql7
-sydir7: ../bin/sydir7
-tar7: ../bin/tar7
-toutf8: ../bin/toutf8
-which: ../bin/which
+$(UTILS): %: ../bin/%$(EXE_EXT)
 
-utils: ../bin/bas7 ../bin/bigfiles ../bin/calc7 ../bin/cat ../bin/comanche ../bin/db7 \
-       ../bin/diff7 ../bin/find7 ../bin/findchar ../bin/ftp7 ../bin/ftpserv ../bin/hd \
-       ../bin/ide7 ../bin/make7 ../bin/portfwd7 ../bin/pv7 ../bin/s7check ../bin/sql7 \
-       ../bin/sydir7 ../bin/tar7 ../bin/toutf8 ../bin/which
+utils: $(UTILS_BIN)
 
 wc: $(SRC)
 	@echo SRC:
@@ -319,7 +363,7 @@ lint2: $(SRC)
 	lint -Zn2048 $(SRC) $(ALL_SYSTEM_LIBS)
 
 cppcheck: $(SRC) $(SEED7_LIB_SRC) $(DRAW_LIB_SRC) $(COMP_DATA_LIB_SRC) $(COMPILER_LIB_SRC)
-	cppcheck --force --enable=all $(SRC) $(SEED7_LIB_SRC) $(DRAW_LIB_SRC) $(COMP_DATA_LIB_SRC) $(COMPILER_LIB_SRC)
+	cppcheck --force --enable=all $^
 
 ifeq ($(HAS_DEPEND),yes)
 ifeq (depend,$(wildcard depend))

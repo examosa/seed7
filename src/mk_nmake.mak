@@ -80,14 +80,6 @@ next_lvl: levelup.exe
 	.\levelup.exe
 	echo X > next_lvl
 
-OBJCOPY_PARAMS = \
-       -L SQLAllocHandle -L SQLBindCol -L SQLBindParameter -L SQLBrowseConnectW -L SQLColAttributeW \
-       -L SQLConnectW -L SQLDataSources -L SQLDescribeColW -L SQLDescribeParam -L SQLDisconnect \
-       -L SQLDriverConnectW -L SQLDriversW -L SQLEndTran -L SQLExecute -L SQLFetch -L SQLFreeHandle \
-       -L SQLFreeStmt -L SQLGetConnectAttrW -L SQLGetData -L SQLGetDiagRecW -L SQLGetInfoW \
-       -L SQLGetStmtAttrW -L SQLGetTypeInfoW -L SQLNumParams -L SQLNumResultCols -L SQLPrepareW \
-       -L SQLSetConnectAttrW -L SQLSetDescFieldW -L SQLSetEnvAttr
-
 sql_db2.o: sql_db2.c sql_cli.c sql_log.c
 	$(CC) $(CPPFLAGS) $(DB2_INCLUDE_OPTION) $(CFLAGS_NO_FLTO) sql_db2.c $(DB2_LIBS) $(DB2_CC_OPTION) -o sql_db2.o
 	$(OBJCOPY) $(OBJCOPY_PARAMS) sql_db2.o
