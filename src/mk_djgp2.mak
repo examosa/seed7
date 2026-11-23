@@ -185,7 +185,7 @@ strip:
 	strip ..\bin\s7.exe
 
 chkccomp.h:
-	echo #define LIST_DIRECTORY_CONTENTS "dir" >> chkccomp.h
+	echo #define LIST_DIRECTORY_CONTENTS "dir" > chkccomp.h
 	echo #define UNIX_DO_SLEEP >> chkccomp.h
 	echo #define ERROR_REDIRECTING_FAILS >> chkccomp.h
 	echo #define LIMIT_PRINTF_MAXIMUM_FLOAT_PRECISION 512 >> chkccomp.h
