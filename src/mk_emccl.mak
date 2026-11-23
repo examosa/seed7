@@ -187,7 +187,9 @@ uninstall:
 dep: depend
 
 strip:
-	strip ../bin/s7
+	@echo
+	@echo "  Cannot strip."
+	@echo
 
 chkccomp.h:
 	echo "#define LIST_DIRECTORY_CONTENTS \"ls\"" > chkccomp.h
