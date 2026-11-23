@@ -88,7 +88,14 @@ DATABASE_LIB_SRC = $(DATABASE_LIB_SRC_STD_INCL) sql_db2.c sql_ifx.c sql_srv.c
 COMP_DATA_LIB_SRC = typ_data.c rfl_data.c ref_data.c listutl.c flistutl.c typeutl.c datautl.c
 COMPILER_LIB_SRC = $(PSRC) $(LSRC) $(ESRC) $(ASRC) $(GSRC)
 
-s7: ..\bin\s7.js ..\prg\s7.js
+ifdef MAKEFILE_LIST
+THIS_MAKEFILE = $(firstword $(MAKEFILE_LIST))
+else
+THIS_MAKEFILE = mk_emccw.mak
+endif
+
+s7: next_lvl
+	$(MAKE) -f $(THIS_MAKEFILE) ..\bin\s7.js ..\prg\s7.js
 	node ..\bin\s7.js -l ..\lib level
 	node --stack-size=8192 ..\bin\s7.js -l ..\lib -q ..\prg\confval > ..\bin\cc_conf_emcc.prop
 	@echo.
@@ -100,9 +107,8 @@ s7c: ..\bin\s7c.js ..\prg\s7c.js
 	@echo Use 'make test' (with your make command) to check Seed7.
 	@echo.
 
-..\bin\s7.js: levelup.exe next_lvl $(OBJ) $(ALL_S7_LIBS) ..\bin\$(SPECIAL_LIB)
+..\bin\s7.js: $(OBJ) $(ALL_S7_LIBS) ..\bin\$(SPECIAL_LIB)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) --pre-js ..\bin\$(SPECIAL_LIB) -o ..\bin\s7.js
-	del next_lvl
 
 ..\prg\s7.js: ..\bin\s7.js
 	copy ..\bin\s7.js ..\prg /Y
@@ -120,7 +126,6 @@ levelup.exe: levelup.c
 
 next_lvl: levelup.exe
 	.\levelup.exe
-	echo X > next_lvl
 
 sql_%.o: sql_%.c
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDE_OPTIONS) $< -o $@

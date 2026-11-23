@@ -99,7 +99,14 @@ DATABASE_LIB_SRC = $(DATABASE_LIB_SRC_STD_INCL) sql_db2.c sql_ifx.c sql_srv.c
 COMP_DATA_LIB_SRC = typ_data.c rfl_data.c ref_data.c listutl.c flistutl.c typeutl.c datautl.c
 COMPILER_LIB_SRC = $(PSRC) $(LSRC) $(ESRC) $(ASRC) $(GSRC)
 
-s7: ../bin/s7 ../prg/s7
+ifdef MAKEFILE_LIST
+THIS_MAKEFILE = $(firstword $(MAKEFILE_LIST))
+else
+THIS_MAKEFILE = mk_linux.mak
+endif
+
+s7: next_lvl
+	$(MAKE) -f $(THIS_MAKEFILE) ../bin/s7 ../prg/s7
 	../bin/s7 -l ../lib level
 	@echo
 	@echo "  Use 'make s7c' (with your make command) to create the compiler."
@@ -110,9 +117,8 @@ s7c: ../bin/s7c ../prg/s7c
 	@echo "  Use 'make test' (with your make command) to check Seed7."
 	@echo
 
-../bin/s7: levelup next_lvl $(OBJ) $(ALL_S7_LIBS)
+../bin/s7: $(OBJ) $(ALL_S7_LIBS)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ../bin/s7
-	rm next_lvl
 
 ../prg/s7:
 	ln -sf ../bin/s7 ../prg
@@ -128,7 +134,6 @@ levelup: levelup.c
 
 next_lvl: levelup
 	./levelup
-	echo "X" > next_lvl
 
 OBJCOPY_PARAMS = \
        -L SQLAllocHandle -L SQLBindCol -L SQLBindParameter -L SQLBrowseConnectW -L SQLColAttributeW \

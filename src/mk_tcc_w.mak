@@ -85,7 +85,14 @@ DATABASE_LIB_SRC = sql_base.c sql_db2.c sql_fire.c sql_ifx.c sql_lite.c sql_my.c
 COMP_DATA_LIB_SRC = typ_data.c rfl_data.c ref_data.c listutl.c flistutl.c typeutl.c datautl.c
 COMPILER_LIB_SRC = $(PSRC) $(LSRC) $(ESRC) $(ASRC) $(GSRC)
 
-s7: ..\bin\s7.exe ..\prg\s7.exe
+ifdef MAKEFILE_LIST
+THIS_MAKEFILE = $(firstword $(MAKEFILE_LIST))
+else
+THIS_MAKEFILE = mk_tcc_w.mak
+endif
+
+s7: next_lvl
+	$(MAKE) -f $(THIS_MAKEFILE) ..\bin\s7.exe ..\prg\s7.exe
 	..\bin\s7 -l ..\lib level
 	@echo.
 	@echo Use 'make s7c' (with your make command) to create the compiler.
@@ -96,9 +103,8 @@ s7c: ..\bin\s7c.exe ..\prg\s7c.exe
 	@echo Use 'make test' (with your make command) to check Seed7.
 	@echo.
 
-..\bin\s7.exe: levelup.exe next_lvl $(OBJ) $(ALL_S7_LIBS)
+..\bin\s7.exe: $(OBJ) $(ALL_S7_LIBS)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ..\bin\s7.exe
-	del next_lvl
 
 ..\prg\s7.exe: ..\bin\s7.exe
 	copy ..\bin\s7.exe ..\prg /Y
@@ -114,7 +120,6 @@ levelup.exe: levelup.c
 
 next_lvl: levelup.exe
 	.\levelup.exe
-	echo X > next_lvl
 
 sql_db2.o: sql_db2.c
 	$(CC) -c $(CPPFLAGS) $(DB2_INCLUDE_OPTION) $(CFLAGS) $< -o $@

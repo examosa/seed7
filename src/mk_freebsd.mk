@@ -96,7 +96,7 @@ s7: ../bin/s7 ../prg/s7
 
 s7c: ../bin/s7c ../prg/s7c
 
-../bin/s7: levelup next_lvl $(OBJ) $(ALL_S7_LIBS)
+../bin/s7: levelup next_lvl .WAIT $(OBJ) $(ALL_S7_LIBS)
 	$(CC) $(LDFLAGS) $(OBJ) $(ALL_S7_LIBS) $(ALL_SYSTEM_LIBS) -o ../bin/s7
 	rm next_lvl
 
@@ -126,7 +126,8 @@ sql_srv.o: sql_srv.c
 	$(CC) $(CPPFLAGS) $(SQL_SERVER_INCLUDE_OPTION) $(CFLAGS) -c -o $@ $<
 
 all: depend
-	$(MAKE) -f mk_freebsd.mk s7 s7c
+	$(MAKE) -f mk_freebsd.mk s7
+	$(MAKE) -f mk_freebsd.mk s7c
 
 .PHONY: clean s7 s7c test check install all next_lvl strip clean_utils distclean uninstall
 
