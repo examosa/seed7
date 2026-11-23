@@ -263,9 +263,12 @@ depend: version.h wrdepend
 ../bin/$(COMPILER_LIB): $(COMPILER_LIB_OBJ)
 	ar r ../bin/$(COMPILER_LIB) $(COMPILER_LIB_OBJ)
 
-../bin/%: ../prg/%.sd7 ../bin/s7c
-	../bin/s7c -l ../lib -b ../bin -O3 -oc3 $<
-	mv $(<:.sd7=) ../bin
+.for u in bas7 bigfiles calc7 cat comanche db7 diff7 find7 findchar ftp7 ftpserv hd \
+          ide7 make7 portfwd7 pv7 s7check sql7 sydir7 tar7 toutf8 which
+../bin/$(u): ../prg/$(u).sd7 ../bin/s7c
+	../bin/s7c -l ../lib -b ../bin -O3 -oc3 ../prg/$(u).sd7
+	mv ../prg/$(u) ../bin
+.endfor
 
 bas7: ../bin/bas7
 bigfiles: ../bin/bigfiles
