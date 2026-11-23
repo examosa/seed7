@@ -107,7 +107,7 @@ s7c: ../bin/s7c.exe ../prg/s7c.exe
 	rm next_lvl
 
 ../prg/s7.exe:
-	ln -s ../bin/s7.exe ../prg
+	ln -sf ../bin/s7.exe ../prg
 
 ../bin/s7c.exe: ../prg/s7c.exe
 	cp ../prg/s7c.exe ../bin

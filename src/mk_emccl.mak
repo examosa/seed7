@@ -107,8 +107,8 @@ s7c: ../bin/s7c.js ../prg/s7c.js
 	rm next_lvl
 
 ../prg/s7.js: ../bin/s7.js
-	ln -s ../bin/s7.js ../prg
-	ln -s ../bin/s7.wasm ../prg
+	ln -sf ../bin/s7.js ../prg
+	ln -sf ../bin/s7.wasm ../prg
 
 ../bin/s7c.js: ../prg/s7c.js
 	cp -p ../prg/s7c.js ../bin

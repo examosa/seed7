@@ -114,7 +114,7 @@ s7c: ../bin/s7c ../prg/s7c
 	rm next_lvl
 
 ../prg/s7:
-	ln -s ../bin/s7 ../prg
+	ln -sf ../bin/s7 ../prg
 
 ../bin/s7c: ../prg/s7c
 	cp -p ../prg/s7c ../bin
